@@ -1,0 +1,572 @@
+# GMPPro20DataUpload - Technical Design
+
+## Project Overview
+
+GMPPro20DataUpload is a .NET 8 application that processes Excel-based master data and generates MongoDB documents using a schema-driven architecture.
+
+The framework must be configuration-driven and support future collection additions with minimal code changes.
+
+---
+
+# Architecture Rules
+
+## Important
+
+Do NOT redesign the architecture.
+
+Generate code according to this document.
+
+The framework is schema-driven.
+
+Business rules are controlled by:
+
+* Schema Excel
+* Data Excel
+* Application-deployed JSON Templates
+
+---
+
+# Solution Structure
+
+```text
+GMPPro20DataUpload.sln
+
+├── GMPPro20DataUpload.UI
+│    (.NET 8 WinForms)
+│
+├── GMPPro20DataUpload.Core
+│    (Business Logic)
+│
+├── GMPPro20DataUpload.Models
+│    (Models)
+│
+├── Templates
+│
+└── Logs
+```
+
+---
+
+# Project References
+
+```text
+UI
+ ↓
+Core
+ ↓
+Models
+```
+
+Rules:
+
+* UI references Core
+* Core references Models
+* Models references nobody
+
+---
+
+# Current Collections
+
+## usrRequestBasicInfo
+
+Purpose:
+
+* Upload tracking
+* Request generation
+
+---
+
+## masterDesignations
+
+Purpose:
+
+* Designation creation
+* Designation reuse
+
+---
+
+## masterUsers
+
+Purpose:
+
+* User creation
+* User reuse
+
+---
+
+# Input Files
+
+## User Uploaded Files
+
+### Data Excel
+
+Current columns:
+
+```text
+designationCode
+designationName
+employeeID
+userName
+```
+
+### Schema Excel
+
+Current columns:
+
+```text
+Collection
+Property
+JsonPath
+Source
+Type
+IsMandatory
+Flow
+FlowKey
+```
+
+---
+
+## Application Files
+
+```text
+usrRequestBasicInfo.json
+masterDesignations.json
+masterUsers.json
+```
+
+These files are deployed with the application.
+
+Users do not upload them.
+
+---
+
+# Schema Processing Rules
+
+## Processing Order
+
+Process schema rows in the exact order they appear in Excel.
+
+No Sequence column.
+
+No sorting.
+
+Example:
+
+```text
+Row 1
+Row 2
+Row 3
+```
+
+must be processed in the same order.
+
+---
+
+# Source Types
+
+## Excel
+
+Value comes from Excel.
+
+Examples:
+
+```text
+designationName
+designationCode
+employeeID
+userName
+```
+
+---
+
+## Compute
+
+Value generated before insert.
+
+Examples:
+
+```text
+createdOn
+updatedOn
+sno
+requestCode
+statusID
+formattedReferenceNumber
+referenceNumber
+formattedName
+```
+
+---
+
+## Auto
+
+Value obtained after lookup or insert.
+
+Examples:
+
+```text
+_id
+```
+
+---
+
+# JsonPath Rules
+
+Always use full JsonPath.
+
+Examples:
+
+```text
+systemData.createdOn
+systemData.requestCode
+designations.designationName
+userDetails.designation.itemID
+_id
+isSynced
+```
+
+Do not concatenate path and property.
+
+JsonPath already contains full destination path.
+
+---
+
+# Flow Rules
+
+Flow allows sharing data between collections.
+
+Supported actions:
+
+## Publish
+
+Store value in flow.
+
+## Consume
+
+Read value from flow.
+
+Examples:
+
+```text
+requestCode
+designationId
+designationCode
+designationName
+designationFormattedName
+```
+
+---
+
+# Flow Keys
+
+Use unique names.
+
+Good:
+
+```text
+requestCode
+designationId
+designationName
+designationFormattedName
+```
+
+Avoid:
+
+```text
+id
+name
+status
+```
+
+---
+
+# Cache Rules
+
+Use in-memory cache.
+
+Purpose:
+
+* Reduce MongoDB calls
+* Avoid repeated existence checks
+* Improve performance
+
+Processing order must not depend on Excel sorting.
+
+Cache is preferred over complex multi-level loops.
+
+---
+
+# Existing Record Rules
+
+If record exists:
+
+* Reuse existing record
+* Reuse existing _id
+* Reuse existing flow values
+
+Do NOT update:
+
+```text
+excelFilename
+rowNumber
+```
+
+These fields represent original creation metadata.
+
+---
+
+# Traceability Fields
+
+All newly inserted records contain:
+
+```text
+excelFilename
+rowNumber
+```
+
+Stored at root level.
+
+Purpose:
+
+* Audit
+* Troubleshooting
+* Source tracking
+
+---
+
+# Request Code Generation
+
+Formula:
+
+```text
+moduleCode + next sequence number
+```
+
+Example:
+
+```text
+ORG01
+ORG02
+ORG03
+```
+
+---
+
+# Sequence Formatting Rules
+
+Minimum 2-digit formatting.
+
+Examples:
+
+```text
+1   -> 01
+2   -> 02
+9   -> 09
+10  -> 10
+99  -> 99
+100 -> 100
+```
+
+Only numbers below 10 receive leading zero.
+
+---
+
+# Reference Number Rules
+
+## formattedReferenceNumber
+
+Formula:
+
+```text
+requestCode + "-" + sno
+```
+
+Examples:
+
+```text
+ORG-01
+ORG-10
+ORG-100
+```
+
+---
+
+## referenceNumber
+
+Formula:
+
+```text
+formattedReferenceNumber + "/01"
+```
+
+Examples:
+
+```text
+ORG-01/01
+ORG-10/01
+ORG-100/01
+```
+
+---
+
+# Status Rules
+
+StatusID comes from:
+
+```text
+rootStatusMaster
+```
+
+Condition:
+
+```text
+statusCode = ACT
+```
+
+---
+
+# Common System Values
+
+```text
+createdBy = system
+updatedBy = system
+formState = ACTIVE
+status = Active
+```
+
+Values come from JSON templates.
+
+---
+
+# Validation Rules
+
+Before processing:
+
+1. Validate MongoDB connection
+2. Validate schema file
+3. Validate JSON templates
+4. Validate Excel file
+
+Stop processing if validation fails.
+
+---
+
+# Excel Processing Rules
+
+Trim all Excel values.
+
+Examples:
+
+```text
+" ADM"    -> "ADM"
+"Admin "  -> "Admin"
+" 12345 " -> "12345"
+```
+
+---
+
+# Duplicate Matching
+
+Case-insensitive.
+
+Examples:
+
+```text
+ADM = adm
+Manager = manager
+```
+
+Treat as same value.
+
+---
+
+# Output File
+
+Keep original Excel unchanged.
+
+Create processed copy.
+
+Add columns:
+
+```text
+Status
+Message
+```
+
+After processing:
+
+Open Save As dialog.
+
+Suggested filename:
+
+```text
+originalfilename_processed.xlsx
+```
+
+Example:
+
+```text
+employees.xlsx
+employees_processed.xlsx
+```
+
+---
+
+# Progress Reporting
+
+Display:
+
+```text
+Processing row X of Y
+```
+
+during processing.
+
+---
+
+# Abort Processing
+
+If user aborts:
+
+* Finish current row
+* Save current progress
+* Stop remaining rows
+
+No abrupt termination.
+
+---
+
+# Future Collections
+
+Framework must support future collections through:
+
+* Schema updates
+* JSON template updates
+
+Examples:
+
+```text
+Departments
+Units
+Locations
+Roles
+```
+
+Avoid hardcoding collection-specific logic where possible.
+
+---
+
+# Development Goal
+
+Build reusable framework components.
+
+Future UI may change:
+
+```text
+WinForms
+Web API
+Angular
+Blazor
+```
+
+Core processing logic should remain reusable.
