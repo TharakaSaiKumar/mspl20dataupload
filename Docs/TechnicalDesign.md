@@ -570,3 +570,24 @@ Blazor
 ```
 
 Core processing logic should remain reusable.
+
+# Request Code Generation
+
+`usrRequestBasicInfo.requestCode` will be generated dynamically for each upload.
+
+Formula:
+
+moduleCode + next sequence number
+
+The next sequence number will be calculated based on existing records for the same moduleCode in `usrRequestBasicInfo`.
+
+Minimum 2-digit formatting will be applied.
+
+Examples:
+
+DE + 1  = DE01  
+DE + 2  = DE02  
+DE + 9  = DE09  
+DE + 10 = DE10  
+DE + 99 = DE99  
+DE + 100 = DE100
