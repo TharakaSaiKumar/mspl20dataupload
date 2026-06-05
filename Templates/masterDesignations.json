@@ -1,0 +1,28 @@
+{
+  "systemData": {
+    "referenceNumber": "",
+    "sno": ,
+    "createdOn": {
+      "$date": ""
+    },
+    "updatedOn": {
+      "$date": ""
+    },
+    "createdBy": "system",
+    "updatedBy": "system",
+    "formState": "ACTIVE",
+    "formattedReferenceNumber": "",
+    "statusID": {
+      "$oid": ""
+    },
+    "moduleCode": "DSG",
+    "requestCode": "",
+    "status": "Active"
+  },
+  "designations": {
+    "designationName": "",
+    "designationCode": "",
+    "formattedName": ""
+  },
+  "isSynced": true
+}
