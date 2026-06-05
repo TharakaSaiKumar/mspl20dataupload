@@ -1,16 +1,38 @@
+using GMPPro20DataUpload.Core;
+using GMPPro20DataUpload.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 namespace GMPPro20DataUpload.UI;
 
 static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
     static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
+        IConfiguration config = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .Build();
+
+        MongoConfiguration mongoConfig = config.GetSection("MongoDB").Get<MongoConfiguration>()
+            ?? new MongoConfiguration();
+
+        ServiceCollection services = new();
+
+        services.AddLogging(logging =>
+        {
+            logging.SetMinimumLevel(LogLevel.Information);
+        });
+
+        services.AddSingleton(mongoConfig);
+        services.AddCoreServices();
+        services.AddTransient<Form1>();
+
+        ServiceProvider provider = services.BuildServiceProvider();
+
         ApplicationConfiguration.Initialize();
-        Application.Run(new Form1());
-    }    
+        Application.Run(provider.GetRequiredService<Form1>());
+    }
 }
