@@ -732,3 +732,11 @@ V1:
 Future:
 - CurrentModuleCode will be selected from a UI dropdown.
 - ProcessingService logic will remain unchanged.
+
+usrRequestBasicInfo._id is published using flow key "requestId".
+
+masterDesignations.systemData.basicInfoID
+and
+masterUsers.systemData.basicInfoID
+
+consume the "requestId" flow value and store it as an ObjectId reference.
