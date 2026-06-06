@@ -591,3 +591,13 @@ DE + 9  = DE09
 DE + 10 = DE10  
 DE + 99 = DE99  
 DE + 100 = DE100
+
+## Excel Library Abstraction
+
+Excel access must be handled only through IExcelService.
+
+The current implementation will use ClosedXML for reading and writing Excel files.
+
+Microsoft Office Interop should not be used because it requires Excel installation, complicates deployment, and is not suitable for future Web API/server-side execution.
+
+If the Excel library changes in the future, only ExcelService should be updated.
