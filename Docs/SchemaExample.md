@@ -1,6 +1,5 @@
 Schema Excel
 Collection	Property	DataType	IsMandatory	source	flow	flowkey	jsonpath
-usrRequestBasicInfo	sno	integer	TRUE	compute			sno
 usrRequestBasicInfo	requestCode	text	TRUE	compute	publish	requestCode	requestCode
 usrRequestBasicInfo	statusID	text	TRUE	compute			statusID
 usrRequestBasicInfo	createdOn	datetime	TRUE	compute			createdOn
@@ -11,7 +10,6 @@ masterDesignations	designationCode	 text 	TRUE	excel	publish	designationCode	des
 masterDesignations	designationName	 text 	TRUE	excel	publish	designationName	designations.designationName
 masterDesignations	formattedName	 text 	TRUE	compute	publish	designationFormattedName	designations.formattedName
 masterDesignations	requestCode	 text 	TRUE	compute	consume	requestCode	systemData.requestCode
-masterDesignations	sno	integer	TRUE	compute			systemData.sno
 masterDesignations	formattedReferenceNumber	 text 	TRUE	compute			systemData.formattedReferenceNumber
 masterDesignations	referenceNumber	 text 	TRUE	compute			systemData.referenceNumber
 masterDesignations	createdOn	 datetime 	TRUE	compute			systemData.createdOn
@@ -29,7 +27,6 @@ masterUsers	itemCode	text	TRUE	compute	consume	designationCode	userDetails.desig
 masterUsers	item	text	TRUE	compute	consume	designationName	userDetails.designation.item
 masterUsers	displayData	text	TRUE	compute	consume	designationFormattedName	userDetails.designation.displayData
 masterUsers	requestCode	 text 	TRUE	compute	consume	requestCode	systemData.requestCode
-masterUsers	sno	integer	TRUE	compute			systemData.sno
 masterUsers	formattedReferenceNumber	 text 	TRUE	compute			systemData.formattedReferenceNumber
 masterUsers	referenceNumber	 text 	TRUE	compute			systemData.referenceNumber
 masterUsers	createdOn	datetime	TRUE	compute			systemData.createdOn

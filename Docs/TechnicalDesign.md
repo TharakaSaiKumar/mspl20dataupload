@@ -613,3 +613,114 @@ Reason:
 
 Excel access remains abstracted through IExcelService.
 If the underlying Excel library changes in the future, only ExcelService should require modification.
+
+## V1 Update - Request Code and Reference Number Rules
+
+### usrRequestBasicInfo
+
+* `sno` is removed from the schema.
+* `sno` remains in the JSON template with a fixed value of `1`.
+* `requestCode` is generated dynamically once per upload.
+
+#### Module Mapping Configuration
+
+```text
+USERS        -> USR
+DESIGNATIONS -> DSG
+DEPARTMENTS  -> DEP
+```
+
+#### Formula
+
+```text
+requestCode = ModuleMappings[moduleCode] + formattedSequence
+```
+
+#### Sequence Rule
+
+```text
+sequence = count of usrRequestBasicInfo records for the selected moduleCode + 1
+```
+
+#### Formatting Rules
+
+```text
+1   -> 01
+9   -> 09
+10  -> 10
+100 -> 100
+123 -> 123
+```
+
+#### Example
+
+```text
+moduleCode = USERS
+prefix = USR
+
+sequence = 1
+
+requestCode = USR01
+```
+
+Additional examples:
+
+```text
+USR01
+USR09
+USR100
+USR123
+```
+
+---
+
+### masterDesignations and masterUsers
+
+* `sno` is removed from the schema.
+* `sno` remains in the JSON templates with a fixed value of `1`.
+* `requestCode` uses the same upload requestCode generated in `usrRequestBasicInfo`.
+
+#### Formula
+
+```text
+formattedReferenceNumber = requestCode + "-" + formattedInsertSequence
+
+referenceNumber = formattedReferenceNumber + referenceSuffix
+```
+
+#### Configuration
+
+```text
+referenceSuffix = /00
+```
+
+#### Formatting Rules
+
+```text
+1  -> 01
+9  -> 09
+10 -> 10
+25 -> 25
+```
+
+#### Example
+
+```text
+requestCode = USR01
+
+1st inserted designation:
+formattedReferenceNumber = USR01-01
+referenceNumber = USR01-01/00
+
+25th inserted designation:
+formattedReferenceNumber = USR01-25
+referenceNumber = USR01-25/00
+```
+
+#### Rules
+
+* Designation insert sequence and user insert sequence are maintained separately.
+* Increment the sequence only when a new record is inserted.
+* Do not increment the sequence when an existing record is reused.
+* The same rules apply to both `masterDesignations` and `masterUsers`.
+
