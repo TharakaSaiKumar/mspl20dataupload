@@ -724,3 +724,11 @@ referenceNumber = USR01-25/00
 * Do not increment the sequence when an existing record is reused.
 * The same rules apply to both `masterDesignations` and `masterUsers`.
 
+V1:
+- CurrentModuleCode is configured in appsettings.json.
+- ProcessingService reads CurrentModuleCode and resolves the prefix using ModuleMappings.
+- requestCode is generated dynamically during processing.
+
+Future:
+- CurrentModuleCode will be selected from a UI dropdown.
+- ProcessingService logic will remain unchanged.
