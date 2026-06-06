@@ -22,10 +22,121 @@ public class ValidationService : IValidationService
         _excelService = excelService;
     }
 
-    public Task<ValidationResult> ValidateAsync(
+    public async Task<ValidationResult> ValidateAsync(
         string schemaFilePath,
         string dataFilePath,
         string templateDirectory,
         MongoConfiguration mongoConfig)
-        => throw new NotImplementedException();
+    {
+        var result = new ValidationResult { IsValid = true };
+
+        // Check 1: MongoDB connection — always attempted, independent of other checks.
+        await CheckMongoAsync(result, mongoConfig);
+
+        // Check 6: Data Excel existence and readability — always attempted, independent of schema.
+        CheckDataExcel(result, dataFilePath);
+
+        // Check 2: Schema file exists on disk.
+        if (!CheckSchemaFileExists(result, schemaFilePath))
+            return result; // Checks 3–5 cannot run without the file.
+
+        // Check 3: Schema file is readable and structurally valid.
+        List<SchemaRow>? schema = LoadSchema(result, schemaFilePath);
+        if (schema is null)
+            return result; // Checks 4–5 cannot run without a parsed schema.
+
+        // Check 4: Schema contains at least one row.
+        if (!CheckSchemaNotEmpty(result, schema))
+            return result; // Check 5 cannot run without collections.
+
+        // Check 5: Template file exists for every collection referenced in the schema.
+        CheckTemplates(result, schema, templateDirectory);
+
+        return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // Private check methods — each adds to result.Errors and sets IsValid=false
+    // on failure. Return value indicates whether the check passed.
+    // -------------------------------------------------------------------------
+
+    private async Task CheckMongoAsync(ValidationResult result, MongoConfiguration mongoConfig)
+    {
+        try
+        {
+            bool reachable = await _mongoService.TestConnectionAsync(mongoConfig);
+            if (!reachable)
+                Fail(result, "MongoDB connection failed. Verify the connection string and that the server is reachable.");
+        }
+        catch (Exception ex)
+        {
+            Fail(result, $"MongoDB connection failed. Detail: {ex.Message}");
+        }
+    }
+
+    private void CheckDataExcel(ValidationResult result, string dataFilePath)
+    {
+        if (!File.Exists(dataFilePath))
+        {
+            Fail(result, $"Data file not found: {dataFilePath}");
+            return;
+        }
+
+        try
+        {
+            _excelService.ReadDataRows(dataFilePath);
+        }
+        catch (Exception ex)
+        {
+            Fail(result, $"Data file could not be read: {dataFilePath}. Detail: {ex.Message}");
+        }
+    }
+
+    private static bool CheckSchemaFileExists(ValidationResult result, string schemaFilePath)
+    {
+        if (File.Exists(schemaFilePath))
+            return true;
+
+        Fail(result, $"Schema file not found: {schemaFilePath}");
+        return false;
+    }
+
+    private List<SchemaRow>? LoadSchema(ValidationResult result, string schemaFilePath)
+    {
+        try
+        {
+            return _schemaService.LoadSchema(schemaFilePath);
+        }
+        catch (Exception ex)
+        {
+            Fail(result, $"Schema file is invalid: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool CheckSchemaNotEmpty(ValidationResult result, List<SchemaRow> schema)
+    {
+        if (schema.Count > 0)
+            return true;
+
+        Fail(result, "Schema file contains no valid rows after parsing.");
+        return false;
+    }
+
+    private void CheckTemplates(ValidationResult result, List<SchemaRow> schema, string templateDirectory)
+    {
+        List<string> collections = _schemaService.GetCollectionOrder(schema);
+
+        foreach (string collection in collections)
+        {
+            if (!_templateService.TemplateExists(templateDirectory, collection))
+                Fail(result, $"Template file not found for collection '{collection}' in directory '{templateDirectory}'.");
+        }
+    }
+
+    private static void Fail(ValidationResult result, string message)
+    {
+        result.IsValid = false;
+        result.Errors.Add(message);
+    }
 }
