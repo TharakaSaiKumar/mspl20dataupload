@@ -67,16 +67,33 @@ public partial class Form1 : Form
             int successCount = ctx.Results.Count(r => r.IsSuccess);
             int failedCount  = ctx.Results.Count(r => !r.IsSuccess);
 
+            var summary = new System.Text.StringBuilder();
+            summary.AppendLine("Processing complete.");
+            summary.AppendLine();
+            summary.AppendLine($"Total Rows    : {ctx.TotalRows}");
+            summary.AppendLine($"Processed Rows: {ctx.ProcessedRows}");
+            summary.AppendLine($"Success       : {successCount}");
+            summary.AppendLine($"Failed        : {failedCount}");
+            summary.Append(    $"Aborted       : {ctx.IsAborted}");
+
+            List<ProcessResult> failedRows = ctx.Results.Where(r => !r.IsSuccess).ToList();
+            if (failedRows.Count > 0)
+            {
+                summary.AppendLine();
+                summary.AppendLine();
+                summary.Append("Failed Rows:");
+                foreach (ProcessResult fr in failedRows)
+                {
+                    summary.AppendLine();
+                    summary.Append($"  Row {fr.RowNumber}: {fr.Message}");
+                }
+            }
+
             MessageBox.Show(
-                $"Processing complete.\n\n" +
-                $"Total Rows    : {ctx.TotalRows}\n" +
-                $"Processed Rows: {ctx.ProcessedRows}\n" +
-                $"Success       : {successCount}\n" +
-                $"Failed        : {failedCount}\n" +
-                $"Aborted       : {ctx.IsAborted}",
+                summary.ToString(),
                 "Test Result",
                 MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+                failedCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {

@@ -46,7 +46,20 @@ public class ProcessingService : IProcessingService
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken)
-    {
+    {   
+        // -----------------------------------------------------------------------
+        // Startup guards — fail fast before touching DB or Excel
+        // -----------------------------------------------------------------------
+        if (string.IsNullOrWhiteSpace(_appSettings.CurrentModuleCode))
+            throw new InvalidOperationException(
+                "Application:CurrentModuleCode is null or empty in appsettings.json. " +
+                "Set a valid module code (e.g. USERS) before running.");
+
+        if (!_appSettings.ModuleMappings.ContainsKey(_appSettings.CurrentModuleCode))
+            throw new InvalidOperationException(
+                $"Application:ModuleMappings does not contain an entry for CurrentModuleCode " +
+                $"'{_appSettings.CurrentModuleCode}'. Add it to appsettings.json.");
+
         // -----------------------------------------------------------------------
         // Initialise run state
         // -----------------------------------------------------------------------
@@ -147,7 +160,7 @@ public class ProcessingService : IProcessingService
                 _flowService.Publish(ctx.FlowContext, row.FlowKey, value);
             }
 
-            SetValueAtJsonPath(doc, row.JsonPath, value, row.DataType);
+            SetValueAtJsonPath(doc, row, value);
         }
 
         string basicInfoId = await _mongoService.InsertAsync(RequestBasicInfoCollection, doc.ToJsonString());
@@ -273,7 +286,7 @@ public class ProcessingService : IProcessingService
                 _flowService.Publish(ctx.FlowContext, row.FlowKey, value);
             }
 
-            SetValueAtJsonPath(doc, row.JsonPath, value, row.DataType);
+            SetValueAtJsonPath(doc, row, value);
         }
 
         // Insert or reuse
@@ -399,10 +412,22 @@ public class ProcessingService : IProcessingService
     // JsonPath writer
     // =========================================================================
 
-    private static void SetValueAtJsonPath(JsonNode doc, string jsonPath, string? value, string dataType)
+    private static void SetValueAtJsonPath(JsonNode doc, SchemaRow row, string? value)
     {
+        string jsonPath = row.JsonPath;
+        string dataType = row.DataType;
+
         if (string.IsNullOrWhiteSpace(jsonPath) || value is null)
             return;
+
+        // Diagnostic guard: objectid values must be a non-empty string before writing.
+        if (string.Equals(dataType.Trim(), "objectid", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException(
+                $"ObjectId value is missing for property '{row.Property}' at JsonPath '{row.JsonPath}'. " +
+                $"FlowKey='{row.FlowKey}', Flow='{row.Flow}', Source='{row.Source}'.");
+        }
 
         string[] parts = jsonPath.Split('.');
 
