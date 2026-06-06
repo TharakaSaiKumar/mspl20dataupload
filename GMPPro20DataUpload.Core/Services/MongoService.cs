@@ -91,35 +91,14 @@ public class MongoService : IMongoService
     {
         var collection = GetDatabase().GetCollection<BsonDocument>(RequestInfoCollection);
 
-        // Retrieve all requestCode values where requestCode starts with moduleCode (case-insensitive).
+        // Count documents where moduleCode field equals the given moduleCode (case-insensitive).
         var filter = Builders<BsonDocument>.Filter.Regex(
-            "requestCode",
-            new BsonRegularExpression($"^{Regex.Escape(moduleCode)}", "i"));
+            "moduleCode",
+            new BsonRegularExpression($"^{Regex.Escape(moduleCode)}$", "i"));
 
-        var projection = Builders<BsonDocument>.Projection
-            .Include("requestCode")
-            .Exclude("_id");
+        long count = await collection.CountDocumentsAsync(filter);
 
-        List<BsonDocument> docs = await collection.Find(filter).Project(projection).ToListAsync();
-
-        int maxSeq = 0;
-        int prefixLen = moduleCode.Length;
-
-        foreach (BsonDocument doc in docs)
-        {
-            if (!doc.TryGetValue("requestCode", out BsonValue? rcValue))
-                continue;
-
-            string rc = rcValue.AsString;
-            if (rc.Length <= prefixLen)
-                continue;
-
-            string suffix = rc[prefixLen..];
-            if (int.TryParse(suffix, out int seq) && seq > maxSeq)
-                maxSeq = seq;
-        }
-
-        return maxSeq + 1;
+        return (int)count + 1;
     }
 
     // -------------------------------------------------------------------------

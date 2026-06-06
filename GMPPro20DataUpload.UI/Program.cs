@@ -19,6 +19,9 @@ static class Program
         MongoConfiguration mongoConfig = config.GetSection("MongoDB").Get<MongoConfiguration>()
             ?? new MongoConfiguration();
 
+        ApplicationSettings appSettings = config.GetSection("Application").Get<ApplicationSettings>()
+            ?? new ApplicationSettings();
+
         ServiceCollection services = new();
 
         services.AddLogging(logging =>
@@ -27,6 +30,7 @@ static class Program
         });
 
         services.AddSingleton(mongoConfig);
+        services.AddSingleton(appSettings);
         services.AddCoreServices();
         services.AddTransient<Form1>();
 
