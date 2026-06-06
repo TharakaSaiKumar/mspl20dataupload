@@ -11,6 +11,9 @@ public class ApplicationSettings
     /// <summary>Suffix appended to formattedReferenceNumber to form referenceNumber (e.g. /00).</summary>
     public string ReferenceSuffix { get; set; } = string.Empty;
 
+    /// <summary>Root directory containing JSON template files. Resolved to an absolute path at startup.</summary>
+    public string TemplateDirectory { get; set; } = "Templates";
+
     /// <summary>Maps module codes to reference prefixes (e.g. USERS → USR).</summary>
     public Dictionary<string, string> ModuleMappings { get; set; } = new();
 

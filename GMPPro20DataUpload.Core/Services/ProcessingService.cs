@@ -43,6 +43,7 @@ public class ProcessingService : IProcessingService
         string schemaFilePath,
         string dataFilePath,
         string templateDirectory,
+        string outputPath,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -125,7 +126,6 @@ public class ProcessingService : IProcessingService
         // -----------------------------------------------------------------------
         // Write output Excel
         // -----------------------------------------------------------------------
-        string outputPath = BuildOutputPath(dataFilePath);
         _excelService.WriteOutputFile(dataFilePath, outputPath, ctx.Results);
 
         return ctx;
@@ -523,12 +523,4 @@ public class ProcessingService : IProcessingService
 
     private static string FormatSequence(int n) =>
         n < 10 ? "0" + n : n.ToString();
-
-    private static string BuildOutputPath(string dataFilePath)
-    {
-        string dir      = Path.GetDirectoryName(dataFilePath) ?? string.Empty;
-        string nameOnly = Path.GetFileNameWithoutExtension(dataFilePath);
-        string ext      = Path.GetExtension(dataFilePath);
-        return Path.Combine(dir, $"{nameOnly}_processed{ext}");
-    }
 }

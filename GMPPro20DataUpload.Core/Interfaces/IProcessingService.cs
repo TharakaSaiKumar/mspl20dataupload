@@ -22,6 +22,7 @@ public interface IProcessingService
         string schemaFilePath,
         string dataFilePath,
         string templateDirectory,
+        string outputPath,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken);

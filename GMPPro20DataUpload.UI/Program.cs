@@ -22,6 +22,10 @@ static class Program
         ApplicationSettings appSettings = config.GetSection("Application").Get<ApplicationSettings>()
             ?? new ApplicationSettings();
 
+        // Resolve TemplateDirectory to an absolute path anchored to the exe directory.
+        if (!Path.IsPathRooted(appSettings.TemplateDirectory))
+            appSettings.TemplateDirectory = Path.Combine(AppContext.BaseDirectory, appSettings.TemplateDirectory);
+
         ServiceCollection services = new();
 
         services.AddLogging(logging =>
