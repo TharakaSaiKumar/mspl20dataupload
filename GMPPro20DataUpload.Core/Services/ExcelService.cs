@@ -184,18 +184,19 @@ public class ExcelService : IExcelService
 
     /// <summary>
     /// Returns map of column index (0-based) → trimmed header name from the given header row.
+    /// Column index is derived from each cell's CellReference attribute (e.g. "C1" → 2)
+    /// so sparse rows with missing cells do not shift the mapping.
     /// </summary>
     private static Dictionary<int, string> BuildHeaderMap(Row headerRow, List<string?> sst)
     {
         var map = new Dictionary<int, string>();
-        int colIdx = 0;
 
         foreach (Cell cell in headerRow.Elements<Cell>())
         {
+            int colIdx = CellRefToColIndex(cell.CellReference?.Value);
             string value = GetCellValue(cell, sst).Trim();
             if (!string.IsNullOrEmpty(value))
                 map[colIdx] = value;
-            colIdx++;
         }
 
         return map;
@@ -203,16 +204,17 @@ public class ExcelService : IExcelService
 
     /// <summary>
     /// Returns map of column index (0-based) → trimmed cell value for the given row.
+    /// Column index is derived from each cell's CellReference attribute so sparse rows
+    /// with missing cells do not shift the mapping.
     /// </summary>
     private static Dictionary<int, string> ReadCells(Row row, List<string?> sst)
     {
         var map = new Dictionary<int, string>();
-        int colIdx = 0;
 
         foreach (Cell cell in row.Elements<Cell>())
         {
+            int colIdx = CellRefToColIndex(cell.CellReference?.Value);
             map[colIdx] = GetCellValue(cell, sst).Trim();
-            colIdx++;
         }
 
         return map;
@@ -301,5 +303,24 @@ public class ExcelService : IExcelService
         }
         while (n >= 0);
         return result;
+    }
+
+    /// <summary>
+    /// Converts an OpenXML cell reference (e.g. "AB12") to a 0-based column index.
+    /// Returns 0 for null/empty references rather than throwing.
+    /// </summary>
+    private static int CellRefToColIndex(string? cellRef)
+    {
+        if (string.IsNullOrEmpty(cellRef))
+            return 0;
+
+        int index = 0;
+        foreach (char c in cellRef)
+        {
+            if (!char.IsLetter(c))
+                break;
+            index = index * 26 + (char.ToUpperInvariant(c) - 'A' + 1);
+        }
+        return index - 1; // convert to 0-based
     }
 }
