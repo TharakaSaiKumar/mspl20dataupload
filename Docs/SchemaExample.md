@@ -1,39 +1,43 @@
-Schema Excel
 Collection	Property	DataType	IsMandatory	source	flow	flowkey	jsonpath
 usrRequestBasicInfo	requestCode	text	TRUE	compute	publish	requestCode	requestCode
+usrRequestBasicInfo	moduleCode	text	TRUE	compute			moduleCode
 usrRequestBasicInfo	statusID	text	TRUE	compute			statusID
 usrRequestBasicInfo	createdOn	datetime	TRUE	compute			createdOn
 usrRequestBasicInfo	excelFilename	text	TRUE	compute			excelFilename
 usrRequestBasicInfo	rowNumber	integer	TRUE	compute			rowNumber
-                            
-masterDesignations	designationCode	 text 	TRUE	excel	publish	designationCode	designations.designationCode
-masterDesignations	designationName	 text 	TRUE	excel	publish	designationName	designations.designationName
-masterDesignations	formattedName	 text 	TRUE	compute	publish	designationFormattedName	designations.formattedName
-masterDesignations	requestCode	 text 	TRUE	compute	consume	requestCode	systemData.requestCode
-masterDesignations	formattedReferenceNumber	 text 	TRUE	compute			systemData.formattedReferenceNumber
-masterDesignations	referenceNumber	 text 	TRUE	compute			systemData.referenceNumber
-masterDesignations	createdOn	 datetime 	TRUE	compute			systemData.createdOn
-masterDesignations	updatedOn	 datetime 	TRUE	compute			systemData.updatedOn
+usrRequestBasicInfo	_id	objectid	TRUE	auto	publish	requestId	_id
+masterDesignations	designationCode	text	TRUE	excel	publish	designationCode	designations.designationCode
+masterDesignations	designationName	text	TRUE	excel	publish	designationName	designations.designationName
+masterDesignations	formattedName	text	TRUE	compute	publish	designationFormattedName	designations.formattedName
+masterDesignations	requestCode	text	TRUE	compute	consume	requestCode	systemData.requestCode
+masterDesignations	moduleCode	text	TRUE	compute			systemData.moduleCode
+masterDesignations	formattedReferenceNumber	text	TRUE	compute			systemData.formattedReferenceNumber
+masterDesignations	referenceNumber	text	TRUE	compute			systemData.referenceNumber
+masterDesignations	createdOn	datetime	TRUE	compute			systemData.createdOn
+masterDesignations	updatedOn	datetime	TRUE	compute			systemData.updatedOn
+masterDesignations	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basicInfoID
 masterDesignations	statusID	objectid	TRUE	compute			systemData.statusID
 masterDesignations	_id	objectid	TRUE	auto	publish	designationId	_id
 masterDesignations	excelFilename	text	TRUE	compute			excelFilename
 masterDesignations	rowNumber	integer	TRUE	compute			rowNumber
-                            
 masterUsers	employeeID	text	TRUE	excel			userDetails.employeeID
 masterUsers	userName	text	TRUE	excel			userDetails.userName
 masterUsers	formattedName	text	TRUE	compute			userDetails.formattedName
-masterUsers	itemID	text	TRUE	compute	consume	designationId	userDetails.designation.itemId
+masterUsers	itemID	text	TRUE	compute	consume	designationId	userDetails.designation.itemID
 masterUsers	itemCode	text	TRUE	compute	consume	designationCode	userDetails.designation.itemCode
 masterUsers	item	text	TRUE	compute	consume	designationName	userDetails.designation.item
 masterUsers	displayData	text	TRUE	compute	consume	designationFormattedName	userDetails.designation.displayData
-masterUsers	requestCode	 text 	TRUE	compute	consume	requestCode	systemData.requestCode
-masterUsers	formattedReferenceNumber	 text 	TRUE	compute			systemData.formattedReferenceNumber
-masterUsers	referenceNumber	 text 	TRUE	compute			systemData.referenceNumber
+masterUsers	requestCode	text	TRUE	compute	consume	requestCode	systemData.requestCode
+masterUsers	moduleCode	text	TRUE	compute			systemData.moduleCode
+masterUsers	formattedReferenceNumber	text	TRUE	compute			systemData.formattedReferenceNumber
+masterUsers	referenceNumber	text	TRUE	compute			systemData.referenceNumber
 masterUsers	createdOn	datetime	TRUE	compute			systemData.createdOn
 masterUsers	updatedOn	datetime	TRUE	compute			systemData.updatedOn
+masterUsers	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basicInfoID
 masterUsers	statusID	objectid	TRUE	compute			systemData.statusID
 masterUsers	excelFilename	text	TRUE	compute			excelFilename
 masterUsers	rowNumber	integer	TRUE	compute			rowNumber
+
 
 Data Excel
 designationCode	designationName	employeeID	userName
