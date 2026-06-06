@@ -601,3 +601,15 @@ The current implementation will use ClosedXML for reading and writing Excel file
 Microsoft Office Interop should not be used because it requires Excel installation, complicates deployment, and is not suitable for future Web API/server-side execution.
 
 If the Excel library changes in the future, only ExcelService should be updated.
+
+## Excel Library Decision
+
+The application will use OpenXML SDK for Excel processing.
+
+Reason:
+- Existing company projects already use OpenXML.
+- Team familiarity and consistency.
+- No dependency on Microsoft Excel installation.
+
+Excel access remains abstracted through IExcelService.
+If the underlying Excel library changes in the future, only ExcelService should require modification.
