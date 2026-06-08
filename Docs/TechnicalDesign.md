@@ -794,3 +794,107 @@ ProcessingService would then use the row marked as `LookupKey=TRUE` rather than 
 Deferred for V1.
 
 Current implementation remains unchanged.
+
+## Master Users - Additional V1 Fields
+
+### User Lookup Key
+
+`masterUsers` existence check is currently based on the first `source=excel` row in the schema.
+
+For V1, `userLoginID` must be the first `source=excel` row for `masterUsers`.
+
+Current lookup rule:
+
+```text
+masterUsers -> userDetails.userLoginID
+
+Future enhancement:
+
+Add explicit LookupKey column to schema.
+New User Excel Columns
+
+The data template includes these new columns:
+
+gender
+dateOfJoining
+officialEmail
+userLoginID
+
+Rules:
+
+Column	Required	Output
+userLoginID	Yes	userDetails.userLoginID
+gender	No	userDetails.gender
+dateOfJoining	No	userDetails.dateOfJoining
+officialEmail	No	userDetails.officialEmail
+Gender Transformation
+
+Source:
+
+Excel column: gender
+Schema source: compute
+Schema DataType: object
+
+If gender is blank:
+
+"gender": null
+
+If gender is male, MALE, or Male:
+
+{
+  "itemID": "MALE",
+  "itemCode": "MALE",
+  "item": "Male",
+  "itemType": null,
+  "isActive": null,
+  "systemCode": null,
+  "extraInfo": null,
+  "displayData": "Male"
+}
+
+If gender is female, FEMALE, or Female:
+
+{
+  "itemID": "FEMALE",
+  "itemCode": "FEMALE",
+  "item": "Female",
+  "itemType": null,
+  "isActive": null,
+  "systemCode": null,
+  "extraInfo": null,
+  "displayData": "Female"
+}
+
+Transformation rules:
+
+Property	Rule
+itemID	Uppercase gender value
+itemCode	Uppercase gender value
+item	Sentence case gender value
+displayData	Sentence case gender value
+itemType	null
+isActive	null
+systemCode	null
+extraInfo	null
+
+Validation note:
+
+Although gender is source=compute, it depends on the Excel column gender. Validation must confirm the gender column exists in the data template.
+
+Additional Template Defaults
+
+masterUsers.json includes additional default fields which are not populated from Excel:
+
+userPassword
+isBlocked
+timeZone
+forms
+
+These values remain as defined in the JSON template.
+
+Designation Actual ID Mapping
+
+masterUsers.userDetails.designation.itemActualID uses the same designation id as itemID.
+
+designationId -> userDetails.designation.itemID
+designationId -> userDetails.designation.itemActualID

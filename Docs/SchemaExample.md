@@ -20,10 +20,15 @@ masterDesignations	statusID	objectid	TRUE	compute			systemData.statusID
 masterDesignations	_id	objectid	TRUE	auto	publish	designationId	_id
 masterDesignations	excelFilename	text	TRUE	compute			excelFilename
 masterDesignations	rowNumber	integer	TRUE	compute			rowNumber
+masterUsers	userLoginID	text	TRUE	excel			userDetails.userLoginID
 masterUsers	employeeID	text	TRUE	excel			userDetails.employeeID
 masterUsers	userName	text	TRUE	excel			userDetails.userName
+masterUsers	gender	object	FALSE	excel			userDetails.gender
+masterUsers	dateOfJoining	text	FALSE	excel			userDetails.dateOfJoining
+masterUsers	officialEmail	text	FALSE	excel			userDetails.officialEmail
 masterUsers	formattedName	text	TRUE	compute			userDetails.formattedName
 masterUsers	itemID	text	TRUE	compute	consume	designationId	userDetails.designation.itemID
+masterUsers	itemActualID	text	TRUE	compute	consume	designationId	userDetails.designation.itemActualID
 masterUsers	itemCode	text	TRUE	compute	consume	designationCode	userDetails.designation.itemCode
 masterUsers	item	text	TRUE	compute	consume	designationName	userDetails.designation.item
 masterUsers	displayData	text	TRUE	compute	consume	designationFormattedName	userDetails.designation.displayData
@@ -37,7 +42,6 @@ masterUsers	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basic
 masterUsers	statusID	objectid	TRUE	compute			systemData.statusID
 masterUsers	excelFilename	text	TRUE	compute			excelFilename
 masterUsers	rowNumber	integer	TRUE	compute			rowNumber
-
 
 Data Excel
 designationCode	designationName	employeeID	userName
