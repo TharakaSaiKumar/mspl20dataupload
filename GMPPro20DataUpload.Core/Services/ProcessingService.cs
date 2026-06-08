@@ -266,12 +266,19 @@ public class ProcessingService : IProcessingService
 
         // Fill document fields in schema order
         List<SchemaRow> autoRows = new();
+        List<SchemaRow> updateRows = new();
 
         foreach (SchemaRow row in collectionRows)
         {
             if (string.Equals(row.Source, "auto", StringComparison.OrdinalIgnoreCase))
             {
                 autoRows.Add(row);
+                continue;
+            }
+
+            if (string.Equals(row.Source, "update", StringComparison.OrdinalIgnoreCase))
+            {
+                updateRows.Add(row);
                 continue;
             }
 
@@ -309,6 +316,13 @@ public class ProcessingService : IProcessingService
 
             if (cacheKey is not null)
                 _cacheService.Add(cacheKey, newId);
+
+            // Post-insert updates: set source=update fields on the newly inserted document.
+            foreach (SchemaRow updateRow in updateRows)
+            {
+                await _mongoService.UpdateFieldAsync(
+                    collection, newId, updateRow.JsonPath, newId, updateRow.DataType);
+            }
         }
         else
         {

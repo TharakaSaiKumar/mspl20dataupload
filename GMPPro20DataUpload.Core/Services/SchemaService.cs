@@ -7,10 +7,10 @@ namespace GMPPro20DataUpload.Core.Services;
 public class SchemaService : ISchemaService
 {
     private static readonly HashSet<string> ValidDataTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid" };
+        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object" };
 
     private static readonly HashSet<string> ValidSources =
-        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto" };
+        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update" };
 
     private static readonly HashSet<string> ValidFlowActions =
         new(StringComparer.OrdinalIgnoreCase) { "publish", "consume" };

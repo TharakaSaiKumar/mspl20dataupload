@@ -24,6 +24,13 @@ public interface IMongoService
     Task<string> InsertAsync(string collectionName, string jsonDocument);
 
     /// <summary>
+    /// Updates a single field on an existing document using MongoDB $set.
+    /// fieldPath uses dot-notation (e.g. systemData.actualID).
+    /// When dataType is "objectid", value is written as a BsonObjectId; otherwise as a string.
+    /// </summary>
+    Task UpdateFieldAsync(string collectionName, string documentId, string fieldPath, string value, string dataType);
+
+    /// <summary>
     /// Retrieves the _id of the active status record from rootStatusMaster
     /// where statusCode = ACT.
     /// </summary>

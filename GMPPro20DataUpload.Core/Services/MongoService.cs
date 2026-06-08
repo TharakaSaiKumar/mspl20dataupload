@@ -68,6 +68,28 @@ public class MongoService : IMongoService
         return doc["_id"].ToString()!;
     }
 
+    public async Task UpdateFieldAsync(
+        string collectionName,
+        string documentId,
+        string fieldPath,
+        string value,
+        string dataType)
+    {
+        var collection = GetDatabase().GetCollection<BsonDocument>(collectionName);
+
+        FilterDefinition<BsonDocument> filter =
+            Builders<BsonDocument>.Filter.Eq("_id", ObjectId.Parse(documentId));
+
+        BsonValue bsonValue = string.Equals(dataType.Trim(), "objectid", StringComparison.OrdinalIgnoreCase)
+            ? new BsonObjectId(ObjectId.Parse(value))
+            : new BsonString(value);
+
+        UpdateDefinition<BsonDocument> update =
+            Builders<BsonDocument>.Update.Set(fieldPath, bsonValue);
+
+        await collection.UpdateOneAsync(filter, update);
+    }
+
     public async Task<string> GetActiveStatusIdAsync()
     {
         if (_activeStatusId is not null)
