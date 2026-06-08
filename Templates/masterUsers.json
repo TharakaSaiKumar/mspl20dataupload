@@ -27,11 +27,44 @@
     "employeeID": "",
     "designation": {
       "itemID": "",
+      "itemActualID": "",
       "itemCode": "",
       "item": "",
       "displayData": ""
     },
+    "dateOfJoining": "",
+    "officialEmail": "",
+    "userLoginID": "",
+    "userPassword": "$2a$11$XjppPmGRgN0BsbSSdsHN9.aQJgtUiDaoKt291DUKbDkyAS6weNyUK",
+    "gender": {
+      "itemID": "",
+      "itemCode": "",
+      "item": "",
+      "itemType": null,
+      "isActive": null,
+      "systemCode": null,
+      "extraInfo": null,
+      "displayData": ""
+    },
+    "timeZone": {
+      "item": "India Standard Time",
+      "itemCode": "+05:30",
+      "displayItemName": null,
+      "optionType": null,
+      "itemID": "-330",
+      "itemActualID": null,
+      "displayData": "India Standard Time"
+    },
+    "isBlocked": "NO",
     "formattedName": ""
   },
-  "isSynced": true
+  "forms": [
+    {
+      "formID": "6732e70e080d093432a60d4c",
+      "formTitle": "New User",
+      "formCode": "USER_AUTH",
+      "formType": "MAIN_FORM"
+    }
+  ],
+  "isSynced": false
 }
