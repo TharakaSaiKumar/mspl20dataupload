@@ -1,7 +1,7 @@
 Collection	Property	DataType	IsMandatory	source	flow	flowkey	jsonpath
 usrRequestBasicInfo	requestCode	text	TRUE	compute	publish	requestCode	requestCode
 usrRequestBasicInfo	moduleCode	text	TRUE	compute			moduleCode
-usrRequestBasicInfo	statusID	text	TRUE	compute			statusID
+usrRequestBasicInfo	statusID	objectid	TRUE	lookup		activeStatus	statusID
 usrRequestBasicInfo	createdOn	datetime	TRUE	compute			createdOn
 usrRequestBasicInfo	excelFilename	text	TRUE	compute			excelFilename
 usrRequestBasicInfo	rowNumber	integer	TRUE	compute			rowNumber
@@ -16,7 +16,7 @@ masterDesignations	referenceNumber	text	TRUE	compute			systemData.referenceNumbe
 masterDesignations	createdOn	datetime	TRUE	compute			systemData.createdOn
 masterDesignations	updatedOn	datetime	TRUE	compute			systemData.updatedOn
 masterDesignations	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basicInfoID
-masterDesignations	statusID	objectid	TRUE	compute			systemData.statusID
+masterDesignations	statusID	objectid	TRUE	lookup		activeStatus	systemData.statusID
 masterDesignations	_id	objectid	TRUE	auto	publish	designationId	_id
 masterDesignations	excelFilename	text	TRUE	compute			excelFilename
 masterDesignations	rowNumber	integer	TRUE	compute			rowNumber
@@ -33,6 +33,9 @@ masterUsers	itemActualID	text	TRUE	compute	consume	designationId	userDetails.des
 masterUsers	itemCode	text	TRUE	compute	consume	designationCode	userDetails.designation.itemCode
 masterUsers	item	text	TRUE	compute	consume	designationName	userDetails.designation.item
 masterUsers	displayData	text	TRUE	compute	consume	designationFormattedName	userDetails.designation.displayData
+masterUsers	primaryUnit	object	TRUE	lookup		primaryUnit	userDetails.primaryUnit
+masterUsers	primaryDepartment	object	TRUE	lookup		primaryDepartment	userDetails.primaryDepartment
+masterUsers	block	object	TRUE	lookup		block	userDetails.block
 masterUsers	requestCode	text	TRUE	compute	consume	requestCode	systemData.requestCode
 masterUsers	moduleCode	text	TRUE	compute			systemData.moduleCode
 masterUsers	formattedReferenceNumber	text	TRUE	compute			systemData.formattedReferenceNumber
@@ -40,13 +43,15 @@ masterUsers	referenceNumber	text	TRUE	compute			systemData.referenceNumber
 masterUsers	createdOn	datetime	TRUE	compute			systemData.createdOn
 masterUsers	updatedOn	datetime	TRUE	compute			systemData.updatedOn
 masterUsers	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basicInfoID
-masterUsers	statusID	objectid	TRUE	compute			systemData.statusID
+masterUsers	statusID	objectid	TRUE	lookup		activeStatus	systemData.statusID
 masterUsers	excelFilename	text	TRUE	compute			excelFilename
 masterUsers	rowNumber	integer	TRUE	compute			rowNumber
 masterUsers	actualID	objectid	TRUE	update			systemData.actualID
 
+
 Data Excel
-designationCode	designationName	employeeID	userName	gender	dateOfJoining	officialEmail	userLoginID
+designationCode	designationName	employeeID	userName	gender	dateOfJoining	officialEmail	userLoginID	primaryUnitCode	primaryDepartmentCode	blockCode
+
 
 
 Json paths

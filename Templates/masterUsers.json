@@ -27,6 +27,22 @@
   "userDetails": {
     "userName": "",
     "employeeID": "",
+    "primaryUnit": {
+      "itemID": "",
+      "itemCode": "",
+      "item": "",
+      "displayData": "",
+      "itemActualID": "",
+      "isActive": null
+    },
+    "primaryDepartment": {
+      "itemID": "",
+      "itemCode": "",
+      "item": "",
+      "displayData": "",
+      "itemActualID": "",
+      "isActive": null
+    },
     "designation": {
       "itemID": "",
       "itemActualID": "",
@@ -58,7 +74,15 @@
       "displayData": "India Standard Time"
     },
     "isBlocked": "NO",
-    "formattedName": ""
+    "formattedName": "",
+    "block": {
+      "itemID": "",
+      "itemCode": "",
+      "item": "",
+      "displayData": "",
+      "itemActualID": "",
+      "isActive": null
+    }
   },
   "forms": [
     {

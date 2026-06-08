@@ -898,3 +898,259 @@ masterUsers.userDetails.designation.itemActualID uses the same designation id as
 
 designationId -> userDetails.designation.itemID
 designationId -> userDetails.designation.itemActualID
+
+## Source Type: update
+
+### Purpose
+
+The `update` source type is used for fields whose values are not available until after the document has been inserted into MongoDB.
+
+Unlike:
+
+* `excel` → value comes from Excel
+* `compute` → value is calculated before insert
+* `auto` → value is generated during insert and may be published to flow
+
+the `update` source is processed after a successful insert.
+
+---
+
+### Current Usage
+
+The following fields use `source=update`:
+
+| Collection         | Property | JsonPath            |
+| ------------------ | -------- | ------------------- |
+| masterDesignations | actualID | systemData.actualID |
+| masterUsers        | actualID | systemData.actualID |
+
+---
+
+### Processing Flow
+
+For a new record:
+
+```text
+Build document
+↓
+Insert document into MongoDB
+↓
+MongoDB returns inserted _id
+↓
+Process source=update rows
+↓
+Update target JsonPath with inserted _id
+```
+
+Example:
+
+```text
+Inserted _id:
+6992c9931e4847759dea5d88
+```
+
+Result:
+
+```json
+{
+  "systemData": {
+    "actualID": {
+      "$oid": "6992c9931e4847759dea5d88"
+    }
+  }
+}
+```
+
+---
+
+### Existing Record Behaviour
+
+If an existing record is reused:
+
+```text
+No insert
+No update
+```
+
+The existing MongoDB document remains unchanged.
+
+---
+
+### Data Type Rules
+
+For:
+
+```text
+DataType = objectid
+```
+
+the inserted MongoDB `_id` must be written as an ObjectId value, not as a plain string.
+
+Example:
+
+```json
+{
+  "actualID": {
+    "$oid": "6992c9931e4847759dea5d88"
+  }
+}
+```
+
+not:
+
+```json
+{
+  "actualID": "6992c9931e4847759dea5d88"
+}
+```
+
+---
+
+### Schema Example
+
+```text
+masterDesignations	actualID	objectid	TRUE	update			systemData.actualID
+masterUsers	        actualID	objectid	TRUE	update			systemData.actualID
+```
+
+---
+
+### Design Decision
+
+`actualID` is intentionally implemented using `source=update` rather than `source=auto`.
+
+Reason:
+
+```text
+actualID depends on the MongoDB _id generated during insert.
+```
+
+The value is therefore unavailable during document construction and must be populated after insert succeeds.
+
+## Lookup Mapping Support
+
+### Purpose
+
+`source=lookup` is used when a schema value must be resolved from MongoDB instead of coming directly from Excel or compute logic.
+
+Lookup supports:
+
+* Static lookup values, such as active status code `ACT`
+* Excel-driven lookup values, such as `primaryUnitCode`, `primaryDepartmentCode`, and `blockCode`
+* ObjectId output, such as `statusID`
+* Object output, such as `primaryUnit`, `primaryDepartment`, and `block`
+
+---
+
+### Schema Usage
+
+```text
+Collection              Property             DataType   Source   FlowKey         JsonPath
+usrRequestBasicInfo     statusID             objectid   lookup   activeStatus    statusID
+masterDesignations      statusID             objectid   lookup   activeStatus    systemData.statusID
+masterUsers             statusID             objectid   lookup   activeStatus    systemData.statusID
+masterUsers             primaryUnit          object     lookup   primaryUnit     userDetails.primaryUnit
+masterUsers             primaryDepartment    object     lookup   primaryDepartment userDetails.primaryDepartment
+masterUsers             block                object     lookup   block           userDetails.block
+```
+
+For `source=lookup`, the `FlowKey` column identifies the lookup mapping key from `appsettings.json`.
+
+---
+
+### Lookup Input Types
+
+#### Static Lookup
+
+Used when the lookup input does not come from Excel.
+
+Example:
+
+```text
+activeStatus -> ACT
+```
+
+This is used to find the active status document from `rootStatusMaster`.
+
+#### Excel Lookup
+
+Used when the lookup input comes from the data Excel file.
+
+Examples:
+
+```text
+primaryUnitCode        -> primaryUnit
+primaryDepartmentCode  -> primaryDepartment
+blockCode              -> block
+```
+
+Validation must confirm these Excel columns exist when their lookup mappings are configured.
+
+---
+
+### Lookup Output Types
+
+#### objectid
+
+Writes a MongoDB ObjectId to the target JsonPath.
+
+Example:
+
+```json
+"statusID": {
+  "$oid": "67038ae563f83f3397717254"
+}
+```
+
+#### object
+
+Builds an object from multiple fields in the lookup document.
+
+Example:
+
+```json
+"primaryUnit": {
+  "itemID": "6992c9931e4847759dea5d88",
+  "itemCode": "D",
+  "item": "Unit-IV",
+  "displayData": "Unit-IV (D)",
+  "itemActualID": "6992c9931e4847759dea5d88",
+  "isActive": null
+}
+```
+
+---
+
+### Cache Rule
+
+Lookup results must be cached during a processing run.
+
+Cache key format:
+
+```text
+lookup:{lookupKey}:{inputValue}
+```
+
+Examples:
+
+```text
+lookup:activeStatus:ACT
+lookup:primaryUnit:D
+lookup:primaryDepartment:QA
+lookup:block:B1
+```
+
+This avoids hitting MongoDB for every row when the same lookup value appears multiple times.
+
+---
+
+### Missing Lookup Behaviour
+
+If a required lookup value is missing or no MongoDB document is found:
+
+```text
+The current row fails.
+Processing continues for the next row.
+```
+
+For `activeStatus`, failure is treated as a run-level configuration issue because all rows depend on it.
