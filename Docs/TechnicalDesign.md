@@ -740,3 +740,57 @@ and
 masterUsers.systemData.basicInfoID
 
 consume the "requestId" flow value and store it as an ObjectId reference.
+
+## Future Enhancement - Explicit Lookup Keys
+
+### Current V1 Behaviour
+
+ProcessingService determines whether a document already exists by using the first schema row with:
+
+```text
+source = excel
+```
+
+for the collection.
+
+Current schema ordering results in:
+
+```text
+masterDesignations -> designationCode
+masterUsers        -> employeeID
+```
+
+being used as lookup keys.
+
+### Limitation
+
+The lookup behaviour depends on schema row ordering.
+
+If schema rows are reordered in the future, the existence check could unintentionally use a different field.
+
+### Future Enhancement
+
+Add an explicit schema column:
+
+```text
+LookupKey
+```
+
+Example:
+
+```text
+Collection           Property         LookupKey
+masterDesignations   designationCode  TRUE
+masterDesignations   designationName  FALSE
+
+masterUsers          employeeID       TRUE
+masterUsers          userName         FALSE
+```
+
+ProcessingService would then use the row marked as `LookupKey=TRUE` rather than relying on schema order.
+
+### Status
+
+Deferred for V1.
+
+Current implementation remains unchanged.
