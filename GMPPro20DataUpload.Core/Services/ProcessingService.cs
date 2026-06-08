@@ -347,6 +347,13 @@ public class ProcessingService : IProcessingService
 
         if (string.Equals(row.Source, "compute", StringComparison.OrdinalIgnoreCase))
         {
+            // Gender: source=compute but depends on Excel column "gender".
+            if (string.Equals(row.Property, "gender", StringComparison.OrdinalIgnoreCase))
+            {
+                string excelGender = dataRow.TryGetValue("gender", out string? gv) ? gv.Trim() : string.Empty;
+                return BuildGenderObject(excelGender) ?? string.Empty;
+            }
+
             // consume from flow
             if (!string.IsNullOrEmpty(row.Flow) &&
                 string.Equals(row.Flow, "consume", StringComparison.OrdinalIgnoreCase) &&
@@ -389,8 +396,7 @@ public class ProcessingService : IProcessingService
         };
     }
 
-    private static string BuildFormattedName(string collection, Dictionary<string, string> resolved)
-    {
+    private static string BuildFormattedName(string collection, Dictionary<string, string> resolved)    {
         if (string.Equals(collection, "masterDesignations", StringComparison.OrdinalIgnoreCase))
         {
             resolved.TryGetValue("designationName", out string? dn);
@@ -406,6 +412,22 @@ public class ProcessingService : IProcessingService
         }
 
         return string.Empty;
+    }
+
+    private static string? BuildGenderObject(string excelValue)
+    {
+        if (string.IsNullOrWhiteSpace(excelValue))
+            return null;
+
+        return excelValue.Trim().ToUpperInvariant() switch
+        {
+            "MALE" =>
+                """{"itemID":"MALE","itemCode":"MALE","item":"Male","itemType":null,"isActive":null,"systemCode":null,"extraInfo":null,"displayData":"Male"}""",
+            "FEMALE" =>
+                """{"itemID":"FEMALE","itemCode":"FEMALE","item":"Female","itemType":null,"isActive":null,"systemCode":null,"extraInfo":null,"displayData":"Female"}""",
+            _ => throw new InvalidOperationException(
+                $"Unrecognised gender value '{excelValue}'. Expected: male or female.")
+        };
     }
 
     // =========================================================================
@@ -475,6 +497,14 @@ public class ProcessingService : IProcessingService
                 parentObj[leaf] = JsonValue.Create(intVal);
             else
                 parentObj[leaf] = JsonValue.Create(value);
+        }
+        else if (dt == "object")
+        {
+            // Blank value writes explicit null; non-blank value is a pre-serialised JSON string.
+            if (string.IsNullOrEmpty(value))
+                parentObj[leaf] = null;
+            else
+                parentObj[leaf] = JsonNode.Parse(value);
         }
         else
         {

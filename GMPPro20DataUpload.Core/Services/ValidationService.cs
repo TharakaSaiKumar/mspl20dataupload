@@ -36,6 +36,9 @@ public class ValidationService : IValidationService
         // Check 6: Data Excel existence and readability — always attempted, independent of schema.
         CheckDataExcel(result, dataFilePath);
 
+        // Check 7: gender column must exist in Data Excel (required by masterUsers gender compute logic).
+        CheckGenderColumn(result, dataFilePath);
+
         // Check 2: Schema file exists on disk.
         if (!CheckSchemaFileExists(result, schemaFilePath))
             return result; // Checks 3–5 cannot run without the file.
@@ -131,6 +134,24 @@ public class ValidationService : IValidationService
         {
             if (!_templateService.TemplateExists(templateDirectory, collection))
                 Fail(result, $"Template file not found for collection '{collection}' in directory '{templateDirectory}'.");
+        }
+    }
+
+    private void CheckGenderColumn(ValidationResult result, string dataFilePath)
+    {
+        if (!File.Exists(dataFilePath))
+            return; // Check 6 already reported this error.
+
+        try
+        {
+            IReadOnlyList<string> headers = _excelService.GetColumnHeaders(dataFilePath);
+            bool hasGender = headers.Any(h => string.Equals(h, "gender", StringComparison.OrdinalIgnoreCase));
+            if (!hasGender)
+                Fail(result, "Data file is missing required column 'gender'. The column must exist even if all values are blank.");
+        }
+        catch (Exception ex)
+        {
+            Fail(result, $"Could not read column headers from data file: {ex.Message}");
         }
     }
 

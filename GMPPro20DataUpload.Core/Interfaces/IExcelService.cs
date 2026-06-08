@@ -18,6 +18,11 @@ public interface IExcelService
     List<SchemaRow> ReadSchemaRows(string filePath);
 
     /// <summary>
+    /// Reads only the header row of the Data Excel and returns the column names (trimmed).
+    /// </summary>
+    IReadOnlyList<string> GetColumnHeaders(string filePath);
+
+    /// <summary>
     /// Creates the processed output Excel copy at destinationPath.
     /// Original file at sourcePath is not modified.
     /// Appends Status and Message columns populated from results.

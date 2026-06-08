@@ -23,7 +23,7 @@ masterDesignations	rowNumber	integer	TRUE	compute			rowNumber
 masterUsers	userLoginID	text	TRUE	excel			userDetails.userLoginID
 masterUsers	employeeID	text	TRUE	excel			userDetails.employeeID
 masterUsers	userName	text	TRUE	excel			userDetails.userName
-masterUsers	gender	object	FALSE	excel			userDetails.gender
+masterUsers	gender	object	FALSE	compute			userDetails.gender
 masterUsers	dateOfJoining	text	FALSE	excel			userDetails.dateOfJoining
 masterUsers	officialEmail	text	FALSE	excel			userDetails.officialEmail
 masterUsers	formattedName	text	TRUE	compute			userDetails.formattedName

@@ -90,6 +90,23 @@ public class ExcelService : IExcelService
         return rows;
     }
 
+    public IReadOnlyList<string> GetColumnHeaders(string filePath)
+    {
+        using SpreadsheetDocument doc = OpenReadOnly(filePath);
+        WorksheetPart wsPart = GetFirstWorksheetPart(doc);
+        SheetData sheetData = wsPart.Worksheet!.GetFirstChild<SheetData>()
+            ?? throw new InvalidOperationException($"Data file has no sheet data: {filePath}");
+
+        List<string?> sst = BuildSharedStringTable(doc);
+        Row? headerRow = sheetData.Elements<Row>().FirstOrDefault();
+
+        if (headerRow is null)
+            return Array.Empty<string>();
+
+        Dictionary<int, string> headerMap = BuildHeaderMap(headerRow, sst);
+        return headerMap.Values.ToList();
+    }
+
     public void WriteOutputFile(string sourcePath, string destinationPath, List<ProcessResult> results)
     {
         File.Copy(sourcePath, destinationPath, overwrite: true);
