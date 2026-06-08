@@ -20,6 +20,7 @@ masterDesignations	statusID	objectid	TRUE	compute			systemData.statusID
 masterDesignations	_id	objectid	TRUE	auto	publish	designationId	_id
 masterDesignations	excelFilename	text	TRUE	compute			excelFilename
 masterDesignations	rowNumber	integer	TRUE	compute			rowNumber
+masterDesignations	actualID	objectid	TRUE	update			systemData.actualID
 masterUsers	userLoginID	text	TRUE	excel			userDetails.userLoginID
 masterUsers	employeeID	text	TRUE	excel			userDetails.employeeID
 masterUsers	userName	text	TRUE	excel			userDetails.userName
@@ -42,9 +43,11 @@ masterUsers	basicInfoID	objectid	TRUE	compute	consume	requestId	systemData.basic
 masterUsers	statusID	objectid	TRUE	compute			systemData.statusID
 masterUsers	excelFilename	text	TRUE	compute			excelFilename
 masterUsers	rowNumber	integer	TRUE	compute			rowNumber
+masterUsers	actualID	objectid	TRUE	update			systemData.actualID
 
 Data Excel
-designationCode	designationName	employeeID	userName
+designationCode	designationName	employeeID	userName	gender	dateOfJoining	officialEmail	userLoginID
+
 
 Json paths
 _id

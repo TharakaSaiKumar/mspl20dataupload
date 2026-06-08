@@ -1,5 +1,9 @@
 {
   "systemData": {
+    "actualID": {
+      "$oid": ""
+    },
+    "parentID": null,
     "referenceNumber": "",
     "sno": 1,
     "createdOn": {
@@ -27,5 +31,5 @@
     "designationCode": "",
     "formattedName": ""
   },
-  "isSynced": true
+  "isSynced": false
 }
