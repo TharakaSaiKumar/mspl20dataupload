@@ -10,7 +10,7 @@ public class SchemaService : ISchemaService
         new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object" };
 
     private static readonly HashSet<string> ValidSources =
-        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update" };
+        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup" };
 
     private static readonly HashSet<string> ValidFlowActions =
         new(StringComparer.OrdinalIgnoreCase) { "publish", "consume" };

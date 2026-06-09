@@ -145,10 +145,19 @@ public class ProcessingService : IProcessingService
         JsonNode doc = _templateService.LoadTemplateAsNode(templateDirectory, RequestBasicInfoCollection);
         var resolved = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        // Pre-pass: resolve source=lookup rows and apply to doc.
+        List<SchemaRow> basicInfoLookupRows = collectionRows
+            .Where(r => string.Equals(r.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        await ApplyLookupRowsAsync(basicInfoLookupRows, doc, new Dictionary<string, string>(), resolved);
+
         foreach (SchemaRow row in collectionRows)
         {
             if (string.Equals(row.Source, "auto", StringComparison.OrdinalIgnoreCase))
                 continue; // filled post-insert
+
+            if (string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+                continue; // resolved in pre-pass above
 
             string value = ComputeValue(row, resolved, ctx, activeStatusId, rowNumber: 0);
             resolved[row.Property] = value;
@@ -264,6 +273,12 @@ public class ProcessingService : IProcessingService
             referenceNum = formattedRef + _appSettings.ReferenceSuffix;
         }
 
+        // Pre-pass: resolve source=lookup rows and apply to doc.
+        List<SchemaRow> lookupRows = collectionRows
+            .Where(r => string.Equals(r.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        await ApplyLookupRowsAsync(lookupRows, doc, dataRow, resolved);
+
         // Fill document fields in schema order
         List<SchemaRow> autoRows = new();
         List<SchemaRow> updateRows = new();
@@ -281,6 +296,9 @@ public class ProcessingService : IProcessingService
                 updateRows.Add(row);
                 continue;
             }
+
+            if (string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+                continue; // resolved in pre-pass above
 
             string value = ResolveValue(row, dataRow, resolved, ctx, activeStatusId,
                                         rowNumber, formattedRef, referenceNum);
@@ -356,6 +374,13 @@ public class ProcessingService : IProcessingService
     {
         if (string.Equals(row.Source, "excel", StringComparison.OrdinalIgnoreCase))
         {
+            // dateOfJoining: Excel stores dates as OADate serials; convert to ISO UTC string.
+            if (string.Equals(row.Property, "dateofjoining", StringComparison.OrdinalIgnoreCase))
+            {
+                string raw = dataRow.TryGetValue(row.Property, out string? dv) ? dv.Trim() : string.Empty;
+                return ConvertDateOfJoining(raw);
+            }
+
             return dataRow.TryGetValue(row.Property, out string? ev) ? ev : string.Empty;
         }
 
@@ -428,6 +453,36 @@ public class ProcessingService : IProcessingService
         return string.Empty;
     }
 
+    private static string ConvertDateOfJoining(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        DateTime dt;
+
+        // Excel stores date cells as OADate serial numbers (e.g. "46023").
+        if (double.TryParse(raw, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out double serial))
+        {
+            dt = DateTime.FromOADate(serial);
+        }
+        else if (DateTime.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out dt))
+        {
+            // Parsed as text date — use as-is.
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"Invalid dateOfJoining value '{raw}'. Expected a valid date or an Excel date serial number.");
+        }
+
+        // Treat the parsed value as UTC (Option A: no timezone conversion).
+        // Date-only input → midnight: 2026-04-27T00:00:00.000Z
+        // Date-time input → preserve time: 2026-04-27T14:30:00.000Z
+        return DateTime.SpecifyKind(dt, DateTimeKind.Utc).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+    }
+
     private static string? BuildGenderObject(string excelValue)
     {
         if (string.IsNullOrWhiteSpace(excelValue))
@@ -442,6 +497,139 @@ public class ProcessingService : IProcessingService
             _ => throw new InvalidOperationException(
                 $"Unrecognised gender value '{excelValue}'. Expected: male or female.")
         };
+    }
+
+    // =========================================================================
+    // Lookup resolution
+    // =========================================================================
+
+    private async Task ApplyLookupRowsAsync(
+        List<SchemaRow> lookupRows,
+        JsonNode doc,
+        Dictionary<string, string> dataRow,
+        Dictionary<string, string> resolved)
+    {
+        foreach (SchemaRow row in lookupRows)
+        {
+            string lookupKey = row.FlowKey ?? string.Empty;
+
+            if (!_appSettings.LookupMappings.TryGetValue(lookupKey, out LookupMapping? mapping))
+                throw new InvalidOperationException(
+                    $"Schema row '{row.Property}' has source=lookup with FlowKey='{lookupKey}', " +
+                    $"but no entry found in Application:LookupMappings.");
+
+            string foundJson = await ResolveLookupAsync(lookupKey, mapping, dataRow);
+
+            if (string.Equals(mapping.OutputType, "objectid", StringComparison.OrdinalIgnoreCase))
+            {
+                string extractedValue = ExtractFieldFromJson(foundJson, mapping.OutputPath ?? "_id");
+                resolved[row.Property] = extractedValue;
+                SetValueAtJsonPath(doc, row, extractedValue);
+            }
+            else if (string.Equals(mapping.OutputType, "object", StringComparison.OrdinalIgnoreCase))
+            {
+                ApplyObjectMappingsToDoc(doc, row.JsonPath, foundJson, mapping.Mappings ?? new());
+            }
+        }
+    }
+
+    private async Task<string> ResolveLookupAsync(
+        string lookupKey,
+        LookupMapping mapping,
+        Dictionary<string, string> dataRow)
+    {
+        string inputValue = string.Equals(mapping.InputType, "static", StringComparison.OrdinalIgnoreCase)
+            ? (mapping.InputValue ?? string.Empty)
+            : (dataRow.TryGetValue(mapping.InputColumn ?? string.Empty, out string? col) ? col.Trim() : string.Empty);
+
+        string cacheKey = $"lookup:{lookupKey}:{inputValue}";
+
+        if (_cacheService.TryGet(cacheKey, out string? cached) && cached is not null)
+            return cached;
+
+        string? foundJson = await _mongoService.FindOneAsync(mapping.Collection, mapping.LookupPath, inputValue);
+
+        if (foundJson is null)
+        {
+            string msg = string.Equals(mapping.InputType, "static", StringComparison.OrdinalIgnoreCase)
+                ? $"Lookup '{lookupKey}' configuration error. No record found in {mapping.Collection} where {mapping.LookupPath} = '{inputValue}'."
+                : BuildLookupFailedMessage(lookupKey, mapping, inputValue);
+            throw new InvalidOperationException(msg);
+        }
+
+        _cacheService.Add(cacheKey, foundJson);
+        return foundJson;
+    }
+
+    private static string BuildLookupFailedMessage(string lookupKey, LookupMapping mapping, string inputValue)
+    {
+        string displayKey = lookupKey.Length > 0
+            ? char.ToUpperInvariant(lookupKey[0]) + lookupKey[1..]
+            : lookupKey;
+        return $"{displayKey} lookup failed. No record found in {mapping.Collection} where {mapping.LookupPath} = '{inputValue}'.";
+    }
+
+    private static string ExtractFieldFromJson(string jsonDoc, string fieldPath)
+    {
+        using JsonDocument doc = JsonDocument.Parse(jsonDoc);
+        string[] parts = fieldPath.Split('.');
+        JsonElement current = doc.RootElement;
+
+        foreach (string part in parts)
+        {
+            if (!current.TryGetProperty(part, out JsonElement next))
+                return string.Empty;
+            current = next;
+        }
+
+        // Handle MongoDB Extended JSON ObjectId: { "$oid": "..." }
+        if (current.ValueKind == JsonValueKind.Object
+            && current.TryGetProperty("$oid", out JsonElement oidEl))
+            return oidEl.GetString() ?? string.Empty;
+
+        if (current.ValueKind == JsonValueKind.String)
+            return current.GetString() ?? string.Empty;
+
+        return current.ToString();
+    }
+
+    private static JsonNode? NavigateToJsonPath(JsonNode root, string path)
+    {
+        string[] parts = path.Split('.');
+        JsonNode? current = root;
+
+        foreach (string part in parts)
+        {
+            if (current is not JsonObject obj)
+                return null;
+            current = obj[part];
+            if (current is null)
+                return null;
+        }
+
+        return current;
+    }
+
+    private static void ApplyObjectMappingsToDoc(
+        JsonNode doc,
+        string targetPath,
+        string foundJson,
+        Dictionary<string, string?> mappings)
+    {
+        JsonNode? targetNode = NavigateToJsonPath(doc, targetPath);
+        if (targetNode is not JsonObject targetObj)
+            return;
+
+        foreach (KeyValuePair<string, string?> entry in mappings)
+        {
+            string targetProp = entry.Key;
+            string? sourcePath = entry.Value;
+
+            if (sourcePath is null)
+                targetObj[targetProp] = null;
+            else
+                targetObj[targetProp] = JsonValue.Create(ExtractFieldFromJson(foundJson, sourcePath));
+        }
     }
 
     // =========================================================================

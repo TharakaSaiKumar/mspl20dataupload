@@ -9,17 +9,20 @@ public class ValidationService : IValidationService
     private readonly ISchemaService _schemaService;
     private readonly ITemplateService _templateService;
     private readonly IExcelService _excelService;
+    private readonly ApplicationSettings _appSettings;
 
     public ValidationService(
         IMongoService mongoService,
         ISchemaService schemaService,
         ITemplateService templateService,
-        IExcelService excelService)
+        IExcelService excelService,
+        ApplicationSettings appSettings)
     {
         _mongoService = mongoService;
         _schemaService = schemaService;
         _templateService = templateService;
         _excelService = excelService;
+        _appSettings = appSettings;
     }
 
     public async Task<ValidationResult> ValidateAsync(
@@ -38,6 +41,9 @@ public class ValidationService : IValidationService
 
         // Check 7: gender column must exist in Data Excel (required by masterUsers gender compute logic).
         CheckGenderColumn(result, dataFilePath);
+
+        // Check 8: required Excel input columns for source=lookup mappings.
+        CheckLookupInputColumns(result, dataFilePath);
 
         // Check 2: Schema file exists on disk.
         if (!CheckSchemaFileExists(result, schemaFilePath))
@@ -152,6 +158,35 @@ public class ValidationService : IValidationService
         catch (Exception ex)
         {
             Fail(result, $"Could not read column headers from data file: {ex.Message}");
+        }
+    }
+
+    private void CheckLookupInputColumns(ValidationResult result, string dataFilePath)
+    {
+        if (!File.Exists(dataFilePath))
+            return; // Check 6 already reported this error.
+
+        try
+        {
+            IReadOnlyList<string> headers = _excelService.GetColumnHeaders(dataFilePath);
+
+            foreach (KeyValuePair<string, LookupMapping> entry in _appSettings.LookupMappings)
+            {
+                if (!string.Equals(entry.Value.InputType, "excel", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string column = entry.Value.InputColumn ?? string.Empty;
+                if (string.IsNullOrEmpty(column))
+                    continue;
+
+                bool hasColumn = headers.Any(h => string.Equals(h, column, StringComparison.OrdinalIgnoreCase));
+                if (!hasColumn)
+                    Fail(result, $"Data file is missing required column '{column}' (required by lookup '{entry.Key}').");
+            }
+        }
+        catch (Exception ex)
+        {
+            Fail(result, $"Could not read column headers for lookup column validation: {ex.Message}");
         }
     }
 

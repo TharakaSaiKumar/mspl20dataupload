@@ -17,6 +17,9 @@ public class ApplicationSettings
     /// <summary>Maps module codes to reference prefixes (e.g. USERS → USR).</summary>
     public Dictionary<string, string> ModuleMappings { get; set; } = new();
 
+    /// <summary>Maps lookup keys to their lookup definitions (e.g. activeStatus, primaryUnit).</summary>
+    public Dictionary<string, LookupMapping> LookupMappings { get; set; } = new();
+
     /// <summary>
     /// Returns the module prefix for the current module code.
     /// Throws InvalidOperationException if no mapping is found.
