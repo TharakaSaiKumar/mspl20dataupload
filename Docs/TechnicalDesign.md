@@ -1154,3 +1154,93 @@ Processing continues for the next row.
 ```
 
 For `activeStatus`, failure is treated as a run-level configuration issue because all rows depend on it.
+
+## Processing Result and UI Feedback
+
+### Duplicate User Handling
+
+masterUsers behaves as a transaction collection.
+
+If an existing user is found by `userLoginID`:
+
+* The row status remains `Success`.
+* No new document is inserted into `masterUsers`.
+* Output Excel `Message` column contains:
+
+```
+Duplicate user
+```
+
+Duplicate users are considered successful rows because the upload operation completed correctly and existing data was reused.
+
+Existing `masterDesignations` reuse remains silent and does not populate the Message column.
+
+---
+
+### Processing Summary
+
+The summary area in the WinForms UI displays row statistics:
+
+```
+Total Rows
+Processed Rows
+Success
+Failed
+Aborted
+```
+
+In addition, the summary displays:
+
+#### New Records
+
+Shows the number of newly inserted records for processing collections:
+
+* Designations
+* Users
+
+`usrRequestBasicInfo` is not included because one record is always created per upload.
+
+Lookup collections are not included.
+
+Example:
+
+```
+New Records
+-----------
+Designations : 1
+Users        : 4
+```
+
+#### Duplicates
+
+Shows duplicate counts for transaction collections.
+
+Currently only users are counted.
+
+Example:
+
+```
+Duplicates
+----------
+Users        : 3
+```
+
+---
+
+### WinForms Status Textbox Ordering
+
+The processing status textbox should display messages in chronological order.
+
+Expected sequence:
+
+```
+Processing row 1 of N
+...
+Processing row N of N
+Processing complete.
+```
+
+The final "Processing complete." message must appear only after all row progress messages have been displayed.
+
+```
+```

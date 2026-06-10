@@ -128,6 +128,10 @@ public class ProcessingService : IProcessingService
         // -----------------------------------------------------------------------
         _excelService.WriteOutputFile(dataFilePath, outputPath, ctx.Results);
 
+        // Report completion through the progress pipe so the UI receives this
+        // message in queue order — after all "Processing row N of N" messages.
+        progress.Report(ctx.IsAborted ? "Processing aborted." : "Processing complete.");
+
         return ctx;
     }
 
@@ -202,14 +206,19 @@ public class ProcessingService : IProcessingService
 
         try
         {
+            var rowMessages = new List<string>();
+
             foreach (string collection in collections)
             {
-                await ProcessCollectionAsync(
+                string? msg = await ProcessCollectionAsync(
                     collection, dataRow, schema, templateDirectory, ctx, activeStatusId, resolved, rowNumber);
+                if (msg is not null)
+                    rowMessages.Add(msg);
             }
 
             result.IsSuccess = true;
             result.Status    = "Success";
+            result.Message   = rowMessages.Count > 0 ? string.Join("; ", rowMessages) : string.Empty;
         }
         catch (Exception ex)
         {
@@ -221,7 +230,7 @@ public class ProcessingService : IProcessingService
         return result;
     }
 
-    private async Task ProcessCollectionAsync(
+    private async Task<string?> ProcessCollectionAsync(
         string collection,
         Dictionary<string, string> dataRow,
         List<SchemaRow> schema,
@@ -319,6 +328,12 @@ public class ProcessingService : IProcessingService
         {
             IncrementInsertSeq(collection);
 
+            // Increment insert counters
+            if (string.Equals(collection, "masterDesignations", StringComparison.OrdinalIgnoreCase))
+                ctx.DesignationsInserted++;
+            else if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
+                ctx.UsersInserted++;
+
             string newId = await _mongoService.InsertAsync(collection, doc.ToJsonString());
 
             foreach (SchemaRow autoRow in autoRows)
@@ -341,6 +356,8 @@ public class ProcessingService : IProcessingService
                 await _mongoService.UpdateFieldAsync(
                     collection, newId, updateRow.JsonPath, newId, updateRow.DataType);
             }
+
+            return null;
         }
         else
         {
@@ -355,6 +372,16 @@ public class ProcessingService : IProcessingService
                     _flowService.Publish(ctx.FlowContext, autoRow.FlowKey, existingId);
                 }
             }
+
+            // masterUsers duplicate: count and signal a message for the output Excel
+            if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.UsersDuplicate++;
+                return "Duplicate user";
+            }
+
+            // masterDesignations reuse: silent (no counter, no message)
+            return null;
         }
     }
 

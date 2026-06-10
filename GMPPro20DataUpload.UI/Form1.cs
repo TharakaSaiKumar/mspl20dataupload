@@ -221,13 +221,20 @@ public partial class Form1 : Form
             int failedCount  = ctx.Results.Count(r => !r.IsSuccess);
 
             var sb = new StringBuilder();
-            sb.AppendLine("Processing complete.");
-            sb.AppendLine();
             sb.AppendLine($"Total Rows    : {ctx.TotalRows}");
             sb.AppendLine($"Processed Rows: {ctx.ProcessedRows}");
             sb.AppendLine($"Success       : {successCount}");
             sb.AppendLine($"Failed        : {failedCount}");
-            sb.Append(    $"Aborted       : {ctx.IsAborted}");
+            sb.AppendLine($"Aborted       : {ctx.IsAborted}");
+            sb.AppendLine();
+            sb.AppendLine("New Records");
+            sb.AppendLine("-----------");
+            sb.AppendLine($"Designations : {ctx.DesignationsInserted}");
+            sb.AppendLine($"Users        : {ctx.UsersInserted}");
+            sb.AppendLine();
+            sb.AppendLine("Duplicates");
+            sb.AppendLine("----------");
+            sb.Append(    $"Users        : {ctx.UsersDuplicate}");
 
             List<ProcessResult> failedRows = ctx.Results.Where(r => !r.IsSuccess).ToList();
             if (failedRows.Count > 0)
@@ -243,7 +250,6 @@ public partial class Form1 : Form
             }
 
             _txtSummary.Text = sb.ToString();
-            AppendStatus(ctx.IsAborted ? "Processing aborted." : "Processing complete.");
         }
         catch (Exception ex)
         {
