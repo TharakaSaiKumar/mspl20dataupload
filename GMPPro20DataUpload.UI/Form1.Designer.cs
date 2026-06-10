@@ -214,6 +214,7 @@ partial class Form1
         _txtStatus.ScrollBars = ScrollBars.Vertical;
         _txtStatus.Size = new Size(867, 296);
         _txtStatus.TabIndex = 15;
+        _txtStatus.Font = new Font("Consolas", 10F);
         // 
         // _lblSummary
         // 
@@ -234,6 +235,7 @@ partial class Form1
         _txtSummary.ScrollBars = ScrollBars.Vertical;
         _txtSummary.Size = new Size(867, 276);
         _txtSummary.TabIndex = 17;
+        _txtSummary.Font = new Font("Consolas", 10F);
         // 
         // Form1
         // 
