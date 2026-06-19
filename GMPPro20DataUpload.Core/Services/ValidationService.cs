@@ -42,9 +42,6 @@ public class ValidationService : IValidationService
         // Check 7: gender column must exist in Data Excel (required by masterUsers gender compute logic).
         CheckGenderColumn(result, dataFilePath);
 
-        // Check 8: required Excel input columns for source=lookup mappings.
-        CheckLookupInputColumns(result, dataFilePath);
-
         // Check 2: Schema file exists on disk.
         if (!CheckSchemaFileExists(result, schemaFilePath))
             return result; // Checks 3–5 cannot run without the file.
@@ -60,6 +57,11 @@ public class ValidationService : IValidationService
 
         // Check 5: Template file exists for every collection referenced in the schema.
         CheckTemplates(result, schema, templateDirectory);
+
+        // Check 8: required Excel input columns for source=lookup mappings.
+        // Runs after schema is loaded so IsMandatory can be consulted — optional lookups
+        // (IsMandatory = FALSE) do not require the input column to be present in the data file.
+        CheckLookupInputColumns(result, dataFilePath, schema);
 
         return result;
     }
@@ -161,7 +163,7 @@ public class ValidationService : IValidationService
         }
     }
 
-    private void CheckLookupInputColumns(ValidationResult result, string dataFilePath)
+    private void CheckLookupInputColumns(ValidationResult result, string dataFilePath, List<SchemaRow> schema)
     {
         if (!File.Exists(dataFilePath))
             return; // Check 6 already reported this error.
@@ -177,6 +179,16 @@ public class ValidationService : IValidationService
 
                 string column = entry.Value.InputColumn ?? string.Empty;
                 if (string.IsNullOrEmpty(column))
+                    continue;
+
+                // If the schema row for this lookup key is optional, the input column
+                // is not required to be present in the data file.
+                bool isOptional = schema.Any(r =>
+                    string.Equals(r.Source, "lookup", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(r.FlowKey, entry.Key, StringComparison.OrdinalIgnoreCase) &&
+                    !r.IsMandatory);
+
+                if (isOptional)
                     continue;
 
                 bool hasColumn = headers.Any(h => string.Equals(h, column, StringComparison.OrdinalIgnoreCase));

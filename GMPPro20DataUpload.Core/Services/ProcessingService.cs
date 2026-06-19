@@ -545,6 +545,20 @@ public class ProcessingService : IProcessingService
                     $"Schema row '{row.Property}' has source=lookup with FlowKey='{lookupKey}', " +
                     $"but no entry found in Application:LookupMappings.");
 
+            // For optional excel-driven lookups, skip if the input column is absent or blank.
+            // The template value at the JsonPath is retained as-is.
+            if (!row.IsMandatory &&
+                string.Equals(mapping.InputType, "excel", StringComparison.OrdinalIgnoreCase))
+            {
+                string inputColumn = mapping.InputColumn ?? string.Empty;
+                bool columnMissingOrBlank =
+                    !dataRow.TryGetValue(inputColumn, out string? cellValue) ||
+                    string.IsNullOrWhiteSpace(cellValue);
+
+                if (columnMissingOrBlank)
+                    continue;
+            }
+
             string foundJson = await ResolveLookupAsync(lookupKey, mapping, dataRow);
 
             if (string.Equals(mapping.OutputType, "objectid", StringComparison.OrdinalIgnoreCase))

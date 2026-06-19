@@ -1244,3 +1244,120 @@ The final "Processing complete." message must appear only after all row progress
 
 ```
 ```
+## Optional Lookup Handling
+
+### Overview
+
+Lookup rows with `source=lookup` and `InputType=excel` support both required and optional behavior.
+
+The schema column `IsMandatory` determines whether the lookup input column and lookup value are required.
+
+---
+
+### Required Lookup
+
+When:
+
+* `source = lookup`
+* `InputType = excel`
+* `IsMandatory = TRUE`
+
+The following rules apply:
+
+* The input column must exist in the data Excel.
+* The input cell value must not be blank.
+* The lookup must return a matching record.
+* Missing values or lookup failures cause the row to fail.
+
+Examples:
+
+* primaryUnit
+* primaryDepartment
+
+---
+
+### Optional Lookup
+
+When:
+
+* `source = lookup`
+* `InputType = excel`
+* `IsMandatory = FALSE`
+
+The following rules apply:
+
+* The input column is optional.
+* Blank or missing values do not cause validation failure.
+* Lookup processing is skipped when the value is blank or the column is absent.
+* The template value at the target JsonPath remains unchanged.
+* Row processing continues successfully.
+
+Examples:
+
+* block
+
+---
+
+### Validation Order
+
+Lookup input column validation is performed after schema loading.
+
+This allows validation logic to use schema metadata, including the `IsMandatory` flag, when determining whether an Excel lookup column is required.
+
+---
+
+### Processing Rules
+
+For lookup rows:
+
+```text
+Input value present
+↓
+Perform lookup
+↓
+Populate target object
+```
+
+For optional lookup rows with blank or missing input:
+
+```text
+Blank or missing input
+↓
+Skip lookup
+↓
+Retain template value
+↓
+Continue processing
+```
+
+---
+
+### Template Behavior
+
+Optional lookup properties may use `null` as the template default.
+
+Example:
+
+```json
+"block": null
+```
+
+When lookup processing is skipped, the property remains `null` in the generated MongoDB document.
+
+---
+
+### Example
+
+Schema:
+
+```text
+masterUsers | block | object | FALSE | lookup | | block | userDetails.block
+```
+
+Behavior:
+
+| blockCode value | Result                      |
+| --------------- | --------------------------- |
+| BLK01           | Full block object populated |
+| Blank           | block remains null          |
+| Column missing  | block remains null          |
