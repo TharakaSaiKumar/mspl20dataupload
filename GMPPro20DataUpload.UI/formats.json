@@ -1,0 +1,9 @@
+[
+  {
+    "FormatKey": "USERS",
+    "DisplayName": "Master Users",
+    "ModuleCode": "USERS",
+    "SchemaFile": "UsersSchema.xlsx",
+    "TemplateFile": "masterUsers.json"
+  }
+]

@@ -190,3 +190,111 @@ The output file is therefore the original data file with two extra columns appen
 - **Validate** button — calls `IValidationService.ValidateAsync`; lists all errors on failure or enables the Process button on success. Re-selecting a file resets validation state.
 - **Process** button — only enabled after validation passes. Calls `IProcessingService.ProcessAsync` on a background task with an `IProgress<string>` callback and a `CancellationToken`. Progress messages drive both the status log and a percentage progress bar (parsed from "Processing row N of M" messages). On completion, a structured summary panel shows total/processed/success/failed/aborted counts, new-record counts per collection, duplicate counts, and a list of failed row numbers with messages.
 - **Abort** button — cancels the `CancellationTokenSource`; processing finishes the current row before stopping.
+
+## Format Configuration and Format Selection
+
+### Overview
+
+The application shall support multiple Excel upload formats through a centralized format configuration.
+
+Users will select a format from a dropdown instead of manually selecting schema files.
+
+Each format configuration defines the resources and settings required to process a specific Excel format.
+
+### Format Configuration
+
+A configuration file shall contain one entry for each supported format.
+
+Each format entry shall contain:
+
+* FormatKey
+* DisplayName
+* ModuleCode
+* SchemaFile
+* TemplateFile
+
+Example:
+
+```json
+{
+  "FormatKey": "MasterMaterials",
+  "DisplayName": "Master Materials",
+  "ModuleCode": "MAT",
+  "SchemaFile": "MasterMaterialsSchema.xlsx",
+  "TemplateFile": "masterMaterials.json"
+}
+```
+
+### User Interface Changes
+
+A new format selection dropdown shall be added.
+
+Processing will not be allowed until a format is selected.
+
+The selected format determines:
+
+* Schema file to load
+* JSON template file(s) to load
+* ModuleCode used during processing
+
+### Schema Loading
+
+Schema files shall be loaded automatically from the selected format configuration.
+
+Users will no longer browse and select schema files manually.
+
+Validation rules:
+
+* Format must be selected.
+* SchemaFile must be configured.
+* Schema file must exist.
+* Schema file must be readable.
+
+Processing shall stop if any validation fails.
+
+### Template Loading
+
+Template files shall be loaded automatically from the selected format configuration.
+
+Validation rules:
+
+* TemplateFile must be configured.
+* Template file must exist.
+* Template file must be readable.
+
+Processing shall stop if any validation fails.
+
+### ModuleCode Configuration
+
+ModuleCode shall be obtained from the selected format configuration.
+
+Schema rows using:
+
+```text
+Source = settings
+FlowKey = moduleCode
+```
+
+shall receive the configured ModuleCode value.
+
+This removes the need to hardcode module values in application configuration and allows different formats to use different module codes.
+
+### Processing Flow
+
+```text
+User selects format
+↓
+Load format configuration
+↓
+Validate configuration
+↓
+Load schema from configuration
+↓
+Load template from configuration
+↓
+Load data Excel
+↓
+Execute validation
+↓
+Process data
+```

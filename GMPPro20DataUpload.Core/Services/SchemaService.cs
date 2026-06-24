@@ -10,7 +10,7 @@ public class SchemaService : ISchemaService
         new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object" };
 
     private static readonly HashSet<string> ValidSources =
-        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup" };
+        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup", "settings" };
 
     private static readonly HashSet<string> ValidFlowActions =
         new(StringComparer.OrdinalIgnoreCase) { "publish", "consume" };
@@ -99,6 +99,10 @@ public class SchemaService : ISchemaService
 
             if (hasFlow && string.IsNullOrWhiteSpace(row.FlowKey))
                 errors.AppendLine($"{loc}: FlowKey must not be empty when Flow is '{row.Flow}'.");
+
+            if (string.Equals(row.Source, "settings", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(row.FlowKey))
+                errors.AppendLine($"{loc}: FlowKey must not be empty when Source is 'settings'.");
 
             errorCount++;
         }

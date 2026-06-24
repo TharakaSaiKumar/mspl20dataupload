@@ -26,6 +26,10 @@ static class Program
         if (!Path.IsPathRooted(appSettings.TemplateDirectory))
             appSettings.TemplateDirectory = Path.Combine(AppContext.BaseDirectory, appSettings.TemplateDirectory);
 
+        // Resolve FormatsFile to an absolute path anchored to the exe directory.
+        if (!Path.IsPathRooted(appSettings.FormatsFile))
+            appSettings.FormatsFile = Path.Combine(AppContext.BaseDirectory, appSettings.FormatsFile);
+
         ServiceCollection services = new();
 
         services.AddLogging(logging =>

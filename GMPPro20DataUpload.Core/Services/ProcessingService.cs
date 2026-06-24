@@ -44,6 +44,7 @@ public class ProcessingService : IProcessingService
         string dataFilePath,
         string templateDirectory,
         string outputPath,
+        string moduleCode,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -51,15 +52,14 @@ public class ProcessingService : IProcessingService
         // -----------------------------------------------------------------------
         // Startup guards — fail fast before touching DB or Excel
         // -----------------------------------------------------------------------
-        if (string.IsNullOrWhiteSpace(_appSettings.CurrentModuleCode))
+        if (string.IsNullOrWhiteSpace(moduleCode))
             throw new InvalidOperationException(
-                "Application:CurrentModuleCode is null or empty in appsettings.json. " +
-                "Set a valid module code (e.g. USERS) before running.");
+                "moduleCode must not be empty. Ensure a format with a valid ModuleCode is selected.");
 
-        if (!_appSettings.ModuleMappings.ContainsKey(_appSettings.CurrentModuleCode))
+        if (!_appSettings.ModuleMappings.ContainsKey(moduleCode))
             throw new InvalidOperationException(
-                $"Application:ModuleMappings does not contain an entry for CurrentModuleCode " +
-                $"'{_appSettings.CurrentModuleCode}'. Add it to appsettings.json.");
+                $"No module mapping found for moduleCode '{moduleCode}'. " +
+                "Add it to Application:ModuleMappings in appsettings.json.");
 
         // -----------------------------------------------------------------------
         // Initialise run state
@@ -73,7 +73,7 @@ public class ProcessingService : IProcessingService
         var ctx = new ProcessingContext
         {
             ExcelFilename = dataFilePath,
-            ModuleCode    = _appSettings.CurrentModuleCode,
+            ModuleCode    = moduleCode,
         };
 
         // Fresh flow context on ctx — clear it explicitly
@@ -91,8 +91,8 @@ public class ProcessingService : IProcessingService
         string activeStatusId = await _mongoService.GetActiveStatusIdAsync();
 
         // Generate requestCode
-        string modulePrefix = _appSettings.GetModulePrefix();
-        int seq = await _mongoService.GetNextSequenceAsync(_appSettings.CurrentModuleCode);
+        string modulePrefix = _appSettings.GetModulePrefix(moduleCode);
+        int seq = await _mongoService.GetNextSequenceAsync(moduleCode);
         ctx.RequestCode = modulePrefix + FormatSequence(seq);
 
         // Build and insert usrRequestBasicInfo (once per upload)
@@ -399,9 +399,15 @@ public class ProcessingService : IProcessingService
         string formattedRef,
         string referenceNum)
     {
+        if (string.Equals(row.Source, "settings", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(row.FlowKey, "moduleCode", StringComparison.OrdinalIgnoreCase))
+                return ctx.ModuleCode;
+            return string.Empty;
+        }
+
         if (string.Equals(row.Source, "excel", StringComparison.OrdinalIgnoreCase))
         {
-            // dateOfJoining: Excel stores dates as OADate serials; convert to ISO UTC string.
             if (string.Equals(row.Property, "dateofjoining", StringComparison.OrdinalIgnoreCase))
             {
                 string raw = dataRow.TryGetValue(row.Property, out string? dv) ? dv.Trim() : string.Empty;
@@ -448,7 +454,7 @@ public class ProcessingService : IProcessingService
         return prop switch
         {
             "requestcode"             => ctx.RequestCode ?? string.Empty,
-            "modulecode"              => _appSettings.CurrentModuleCode,
+            "modulecode"              => ctx.ModuleCode,
             "statusid"                => activeStatusId,
             "createdon"               => DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
             "updatedon"               => DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),

@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMongoService, MongoService>();
         services.AddSingleton<IFlowService, FlowService>();
         services.AddSingleton<ICacheService, CacheService>();
+        services.AddSingleton<IFormatService, FormatService>();
 
         services.AddTransient<IValidationService, ValidationService>();
         services.AddTransient<IProcessingService, ProcessingService>();

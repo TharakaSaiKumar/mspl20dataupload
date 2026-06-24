@@ -21,9 +21,8 @@ partial class Form1
     #region Windows Form Designer generated code
 
     // File picker rows
-    private System.Windows.Forms.Label   _lblSchema;
-    private System.Windows.Forms.TextBox _txtSchemaPath;
-    private System.Windows.Forms.Button  _btnBrowseSchema;
+    private System.Windows.Forms.Label   _lblFormat;
+    private System.Windows.Forms.ComboBox _cboFormat;
 
     private System.Windows.Forms.Label   _lblData;
     private System.Windows.Forms.TextBox _txtDataPath;
@@ -48,9 +47,8 @@ partial class Form1
 
     private void InitializeComponent()
     {
-        _lblSchema = new Label();
-        _txtSchemaPath = new TextBox();
-        _btnBrowseSchema = new Button();
+        _lblFormat = new Label();
+        _cboFormat = new ComboBox();
         _lblData = new Label();
         _txtDataPath = new TextBox();
         _btnBrowseData = new Button();
@@ -68,32 +66,23 @@ partial class Form1
         _txtSummary = new TextBox();
         SuspendLayout();
         // 
-        // _lblSchema
+        // _lblFormat
         // 
-        _lblSchema.Location = new Point(12, 19);
-        _lblSchema.Name = "_lblSchema";
-        _lblSchema.Size = new Size(85, 28);
-        _lblSchema.TabIndex = 0;
-        _lblSchema.Text = "Schema File:";
+        _lblFormat.Location = new Point(12, 19);
+        _lblFormat.Name = "_lblFormat";
+        _lblFormat.Size = new Size(85, 28);
+        _lblFormat.TabIndex = 0;
+        _lblFormat.Text = "Format:";
         // 
-        // _txtSchemaPath
+        // _cboFormat
         // 
-        _txtSchemaPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        _txtSchemaPath.Location = new Point(103, 16);
-        _txtSchemaPath.Name = "_txtSchemaPath";
-        _txtSchemaPath.ReadOnly = true;
-        _txtSchemaPath.Size = new Size(671, 31);
-        _txtSchemaPath.TabIndex = 1;
-        // 
-        // _btnBrowseSchema
-        // 
-        _btnBrowseSchema.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        _btnBrowseSchema.Location = new Point(784, 15);
-        _btnBrowseSchema.Name = "_btnBrowseSchema";
-        _btnBrowseSchema.Size = new Size(90, 35);
-        _btnBrowseSchema.TabIndex = 2;
-        _btnBrowseSchema.Text = "Browse…";
-        _btnBrowseSchema.Click += BtnBrowseSchema_Click;
+        _cboFormat.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        _cboFormat.DropDownStyle = ComboBoxStyle.DropDownList;
+        _cboFormat.Location = new Point(103, 16);
+        _cboFormat.Name = "_cboFormat";
+        _cboFormat.Size = new Size(762, 31);
+        _cboFormat.TabIndex = 1;
+        _cboFormat.SelectedIndexChanged += CboFormat_SelectedIndexChanged;
         // 
         // _lblData
         // 
@@ -242,9 +231,8 @@ partial class Form1
         AutoScaleDimensions = new SizeF(10F, 25F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(891, 921);
-        Controls.Add(_lblSchema);
-        Controls.Add(_txtSchemaPath);
-        Controls.Add(_btnBrowseSchema);
+        Controls.Add(_lblFormat);
+        Controls.Add(_cboFormat);
         Controls.Add(_lblData);
         Controls.Add(_txtDataPath);
         Controls.Add(_btnBrowseData);

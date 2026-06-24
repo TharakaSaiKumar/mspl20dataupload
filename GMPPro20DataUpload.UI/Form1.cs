@@ -9,43 +9,61 @@ public partial class Form1 : Form
     private readonly IProcessingService _processingService;
     private readonly IValidationService _validationService;
     private readonly IMongoService _mongoService;
+    private readonly IFormatService _formatService;
     private readonly MongoConfiguration _mongoConfig;
     private readonly ApplicationSettings _appSettings;
 
     private CancellationTokenSource? _cts;
     private bool _validationPassed = false;
+    private List<FormatConfiguration> _formats = new();
+    private FormatConfiguration? _selectedFormat;
 
     public Form1(
         IProcessingService processingService,
         IValidationService validationService,
         IMongoService mongoService,
+        IFormatService formatService,
         MongoConfiguration mongoConfig,
         ApplicationSettings appSettings)
     {
         _processingService = processingService;
         _validationService = validationService;
         _mongoService      = mongoService;
+        _formatService     = formatService;
         _mongoConfig       = mongoConfig;
         _appSettings       = appSettings;
         InitializeComponent();
+        LoadFormats();
     }
 
     // -------------------------------------------------------------------------
-    // File pickers
+    // Format selection
     // -------------------------------------------------------------------------
 
-    private void BtnBrowseSchema_Click(object sender, EventArgs e)
+    private void LoadFormats()
     {
-        using var dlg = new OpenFileDialog
+        try
         {
-            Title  = "Select Schema Excel File",
-            Filter = "Excel Files (*.xlsx)|*.xlsx"
-        };
-        if (dlg.ShowDialog() == DialogResult.OK)
-        {
-            _txtSchemaPath.Text = dlg.FileName;
-            ResetValidationState();
+            _formats = _formatService.LoadFormats(_appSettings.FormatsFile);
+            foreach (FormatConfiguration fmt in _formats)
+                _cboFormat.Items.Add(fmt.DisplayName);
         }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Failed to load format configurations: {ex.Message}",
+                "Configuration Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
+    private void CboFormat_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        _selectedFormat = _cboFormat.SelectedIndex >= 0
+            ? _formats[_cboFormat.SelectedIndex]
+            : null;
+        ResetValidationState();
     }
 
     private void BtnBrowseData_Click(object sender, EventArgs e)
@@ -102,14 +120,41 @@ public partial class Form1 : Form
 
     private async void BtnValidate_Click(object sender, EventArgs e)
     {
-        string schemaPath = _txtSchemaPath.Text.Trim();
-        string dataPath   = _txtDataPath.Text.Trim();
-
-        if (string.IsNullOrEmpty(schemaPath) || string.IsNullOrEmpty(dataPath))
+        if (_selectedFormat is null)
         {
-            AppendStatus("Please select both Schema and Data files before validating.");
+            AppendStatus("Please select a format before validating.");
             return;
         }
+
+        string dataPath = _txtDataPath.Text.Trim();
+
+        if (string.IsNullOrEmpty(dataPath))
+        {
+            AppendStatus("Please select a Data file before validating.");
+            return;
+        }
+
+        // Validate format configuration
+        if (string.IsNullOrWhiteSpace(_selectedFormat.SchemaFile))
+        {
+            AppendStatus("Selected format has no SchemaFile configured.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_selectedFormat.TemplateFile))
+        {
+            AppendStatus("Selected format has no TemplateFile configured.");
+            return;
+        }
+
+        string templateFilePath = Path.Combine(_appSettings.TemplateDirectory, _selectedFormat.TemplateFile);
+        if (!File.Exists(templateFilePath))
+        {
+            AppendStatus($"Template file not found: {templateFilePath}");
+            return;
+        }
+
+        string schemaPath = Path.Combine(_appSettings.TemplateDirectory, _selectedFormat.SchemaFile);
 
         _btnValidate.Enabled = false;
         _validationPassed    = false;
@@ -160,13 +205,19 @@ public partial class Form1 : Form
             return;
         }
 
-        string schemaPath = _txtSchemaPath.Text.Trim();
+        if (_selectedFormat is null)
+        {
+            AppendStatus("No format selected.");
+            return;
+        }
+
+        string schemaPath = Path.Combine(_appSettings.TemplateDirectory, _selectedFormat.SchemaFile);
         string dataPath   = _txtDataPath.Text.Trim();
         string outputPath = _txtOutputPath.Text.Trim();
 
-        if (string.IsNullOrEmpty(schemaPath) || string.IsNullOrEmpty(dataPath))
+        if (string.IsNullOrEmpty(dataPath))
         {
-            AppendStatus("Schema and Data file paths are required.");
+            AppendStatus("Data file path is required.");
             return;
         }
         if (string.IsNullOrEmpty(outputPath))
@@ -210,6 +261,7 @@ public partial class Form1 : Form
                 dataPath,
                 _appSettings.TemplateDirectory,
                 outputPath,
+                _selectedFormat.ModuleCode,
                 _mongoConfig,
                 progress,
                 _cts.Token);
@@ -292,13 +344,13 @@ public partial class Form1 : Form
 
     private void SetProcessingState(bool running)
     {
-        _btnBrowseSchema.Enabled   = !running;
-        _btnBrowseData.Enabled     = !running;
-        _btnBrowseOutput.Enabled   = !running;
-        _btnTestConnection.Enabled = !running;
-        _btnValidate.Enabled       = !running;
-        _btnProcess.Enabled        = !running;
-        _btnAbort.Enabled          =  running;
+        _cboFormat.Enabled             = !running;
+        _btnBrowseData.Enabled         = !running;
+        _btnBrowseOutput.Enabled       = !running;
+        _btnTestConnection.Enabled     = !running;
+        _btnValidate.Enabled           = !running;
+        _btnProcess.Enabled            = !running;
+        _btnAbort.Enabled              =  running;
     }
 
     private void AppendStatus(string message)
