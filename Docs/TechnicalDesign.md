@@ -298,3 +298,73 @@ Execute validation
 ↓
 Process data
 ```
+
+## Generic Processing Summary and Messages
+
+### Overview
+
+The framework shall generate processing summaries and row messages without hardcoded references to specific formats or collections.
+
+The summary shall be based on processing results only.
+
+### Generic Processing Statistics
+
+The framework shall maintain the following statistics during processing:
+
+* Insert Count
+* Duplicate Count
+* Success Count
+* Failed Count
+* Warning Count
+
+Statistics shall be generated dynamically from processing results.
+
+### Generic Summary Generation
+
+The processing summary shall not contain format-specific sections.
+
+Current hardcoded summary labels shall be removed.
+
+Examples:
+
+* Users
+* Designations
+
+Summary values shall be generated directly from processing statistics.
+
+### Generic Duplicate Messages
+
+Duplicate messages shall not contain collection-specific wording.
+
+Current messages such as:
+
+```text
+Duplicate user
+```
+
+shall be replaced with:
+
+```text
+Duplicate
+```
+
+### Generic Status Messages
+
+Processing messages shall be reusable across all formats.
+
+Examples:
+
+```text
+Inserted
+Duplicate
+Failed
+Warning
+```
+
+The framework shall not contain format-specific status messages.
+
+### Backward Compatibility
+
+Processing behavior shall remain unchanged.
+
+Only summary generation, statistics display, and user-facing messages shall be generalized.

@@ -269,24 +269,17 @@ public partial class Form1 : Form
             _progressBar.Style = ProgressBarStyle.Continuous;
             _progressBar.Value = 100;
 
-            int successCount = ctx.Results.Count(r => r.IsSuccess);
-            int failedCount  = ctx.Results.Count(r => !r.IsSuccess);
+            int insertCount    = ctx.Results.Count(r => string.Equals(r.Status, "Inserted",  StringComparison.OrdinalIgnoreCase));
+            int duplicateCount = ctx.Results.Count(r => string.Equals(r.Status, "Duplicate", StringComparison.OrdinalIgnoreCase));
+            int failedCount    = ctx.Results.Count(r => !r.IsSuccess);
 
             var sb = new StringBuilder();
             sb.AppendLine($"Total Rows    : {ctx.TotalRows}");
             sb.AppendLine($"Processed Rows: {ctx.ProcessedRows}");
-            sb.AppendLine($"Success       : {successCount}");
+            sb.AppendLine($"Inserted      : {insertCount}");
+            sb.AppendLine($"Duplicate     : {duplicateCount}");
             sb.AppendLine($"Failed        : {failedCount}");
-            sb.AppendLine($"Aborted       : {ctx.IsAborted}");
-            sb.AppendLine();
-            sb.AppendLine("New Records");
-            sb.AppendLine("-----------");
-            sb.AppendLine($"Designations : {ctx.DesignationsInserted}");
-            sb.AppendLine($"Users        : {ctx.UsersInserted}");
-            sb.AppendLine();
-            sb.AppendLine("Duplicates");
-            sb.AppendLine("----------");
-            sb.Append(    $"Users        : {ctx.UsersDuplicate}");
+            sb.Append(    $"Aborted       : {ctx.IsAborted}");
 
             List<ProcessResult> failedRows = ctx.Results.Where(r => !r.IsSuccess).ToList();
             if (failedRows.Count > 0)

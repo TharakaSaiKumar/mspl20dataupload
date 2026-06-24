@@ -29,17 +29,4 @@ public class ProcessingContext
 
     /// <summary>Per-row outcomes. Written to the output Excel as Status and Message columns.</summary>
     public List<ProcessResult> Results { get; set; } = new();
-
-    // -------------------------------------------------------------------------
-    // Insert / duplicate counters (set by ProcessingService during processing)
-    // -------------------------------------------------------------------------
-
-    /// <summary>Number of new masterDesignations documents inserted this run.</summary>
-    public int DesignationsInserted { get; set; }
-
-    /// <summary>Number of new masterUsers documents inserted this run.</summary>
-    public int UsersInserted { get; set; }
-
-    /// <summary>Number of masterUsers rows that matched an existing document (duplicate by userLoginID).</summary>
-    public int UsersDuplicate { get; set; }
 }

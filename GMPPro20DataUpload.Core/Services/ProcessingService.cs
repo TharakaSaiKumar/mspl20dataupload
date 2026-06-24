@@ -216,9 +216,13 @@ public class ProcessingService : IProcessingService
                     rowMessages.Add(msg);
             }
 
+            bool hasDuplicate = rowMessages.Any(
+                m => string.Equals(m, "Duplicate", StringComparison.OrdinalIgnoreCase));
+
             result.IsSuccess = true;
-            result.Status    = "Success";
-            result.Message   = rowMessages.Count > 0 ? string.Join("; ", rowMessages) : string.Empty;
+            result.Status    = hasDuplicate ? "Duplicate" : "Inserted";
+            //result.Message   = hasDuplicate ? "Duplicate" : string.Empty;
+            result.Message = string.Empty;
         }
         catch (Exception ex)
         {
@@ -328,12 +332,6 @@ public class ProcessingService : IProcessingService
         {
             IncrementInsertSeq(collection);
 
-            // Increment insert counters
-            if (string.Equals(collection, "masterDesignations", StringComparison.OrdinalIgnoreCase))
-                ctx.DesignationsInserted++;
-            else if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
-                ctx.UsersInserted++;
-
             string newId = await _mongoService.InsertAsync(collection, doc.ToJsonString());
 
             foreach (SchemaRow autoRow in autoRows)
@@ -373,14 +371,11 @@ public class ProcessingService : IProcessingService
                 }
             }
 
-            // masterUsers duplicate: count and signal a message for the output Excel
+            // masterUsers duplicate: signal a message for the output Excel
             if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
-            {
-                ctx.UsersDuplicate++;
-                return "Duplicate user";
-            }
+                return "Duplicate";
 
-            // masterDesignations reuse: silent (no counter, no message)
+            // masterDesignations reuse: silent (no message)
             return null;
         }
     }
