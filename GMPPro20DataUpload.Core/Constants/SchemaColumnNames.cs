@@ -14,4 +14,5 @@ public static class SchemaColumnNames
     public const string Flow        = "flow";
     public const string FlowKey     = "flowkey";
     public const string JsonPath    = "jsonpath";
+    public const string Formula     = "Formula";
 }

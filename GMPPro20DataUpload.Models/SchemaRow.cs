@@ -29,4 +29,7 @@ public class SchemaRow
 
     /// <summary>Full dot-notation JsonPath for placing the value in the document (e.g. systemData.createdOn).</summary>
     public string JsonPath { get; set; } = string.Empty;
+
+    /// <summary>Formula expression for Source=formula rows (e.g. "{propertyA} + {propertyB}"). Null for all other source types.</summary>
+    public string? Formula { get; set; }
 }

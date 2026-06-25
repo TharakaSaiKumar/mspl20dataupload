@@ -39,9 +39,6 @@ public class ValidationService : IValidationService
         // Check 6: Data Excel existence and readability — always attempted, independent of schema.
         CheckDataExcel(result, dataFilePath);
 
-        // Check 7: gender column must exist in Data Excel (required by masterUsers gender compute logic).
-        CheckGenderColumn(result, dataFilePath);
-
         // Check 2: Schema file exists on disk.
         if (!CheckSchemaFileExists(result, schemaFilePath))
             return result; // Checks 3–5 cannot run without the file.
@@ -58,10 +55,10 @@ public class ValidationService : IValidationService
         // Check 5: Template file exists for every collection referenced in the schema.
         CheckTemplates(result, schema, templateDirectory);
 
-        // Check 8: required Excel input columns for source=lookup mappings.
-        // Runs after schema is loaded so IsMandatory can be consulted — optional lookups
-        // (IsMandatory = FALSE) do not require the input column to be present in the data file.
-        CheckLookupInputColumns(result, dataFilePath, schema);
+        // Check 7: Mandatory source columns must exist in the data file.
+        // Covers Source=excel, Source=key, Source=filter (by Property name) and
+        // Source=lookup (by LookupMapping.InputColumn) where IsMandatory=TRUE.
+        CheckMandatoryInputColumns(result, dataFilePath, schema);
 
         return result;
     }
@@ -147,58 +144,66 @@ public class ValidationService : IValidationService
 
     private void CheckGenderColumn(ValidationResult result, string dataFilePath)
     {
-        if (!File.Exists(dataFilePath))
-            return; // Check 6 already reported this error.
-
-        try
-        {
-            IReadOnlyList<string> headers = _excelService.GetColumnHeaders(dataFilePath);
-            bool hasGender = headers.Any(h => string.Equals(h, "gender", StringComparison.OrdinalIgnoreCase));
-            if (!hasGender)
-                Fail(result, "Data file is missing required column 'gender'. The column must exist even if all values are blank.");
-        }
-        catch (Exception ex)
-        {
-            Fail(result, $"Could not read column headers from data file: {ex.Message}");
-        }
+        // Intentionally removed — format-specific validation does not belong here.
+        // Gender column presence is now validated generically via CheckMandatoryInputColumns
+        // when the schema defines the gender property with IsMandatory=TRUE and Source=excel.
     }
 
-    private void CheckLookupInputColumns(ValidationResult result, string dataFilePath, List<SchemaRow> schema)
+    private void CheckMandatoryInputColumns(ValidationResult result, string dataFilePath, List<SchemaRow> schema)
     {
         if (!File.Exists(dataFilePath))
-            return; // Check 6 already reported this error.
+            return; // Check 2 already reported this error.
 
         try
         {
             IReadOnlyList<string> headers = _excelService.GetColumnHeaders(dataFilePath);
 
-            foreach (KeyValuePair<string, LookupMapping> entry in _appSettings.LookupMappings)
+            // Source=excel, Source=key, Source=filter: the row.Property name IS the data column.
+            var directSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "excel", "key", "filter" };
+
+            foreach (SchemaRow row in schema)
             {
-                if (!string.Equals(entry.Value.InputType, "excel", StringComparison.OrdinalIgnoreCase))
+                if (!row.IsMandatory || !directSources.Contains(row.Source))
                     continue;
 
-                string column = entry.Value.InputColumn ?? string.Empty;
+                bool hasColumn = headers.Any(h => string.Equals(h, row.Property, StringComparison.OrdinalIgnoreCase));
+                if (!hasColumn)
+                    Fail(result,
+                        $"Collection={row.Collection}, Property={row.Property}, Source={row.Source}: " +
+                        $"Required data column '{row.Property}' is missing from the data file.");
+            }
+
+            // Source=lookup: the input column is specified in LookupMappings (InputType=excel only).
+            foreach (SchemaRow row in schema)
+            {
+                if (!row.IsMandatory ||
+                    !string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string lookupKey = row.FlowKey ?? string.Empty;
+                if (string.IsNullOrEmpty(lookupKey))
+                    continue;
+
+                if (!_appSettings.LookupMappings.TryGetValue(lookupKey, out LookupMapping? mapping))
+                    continue; // Missing mapping is caught by SchemaService validation.
+
+                if (!string.Equals(mapping.InputType, "excel", StringComparison.OrdinalIgnoreCase))
+                    continue; // Static lookups don't require a data column.
+
+                string column = mapping.InputColumn ?? string.Empty;
                 if (string.IsNullOrEmpty(column))
-                    continue;
-
-                // If the schema row for this lookup key is optional, the input column
-                // is not required to be present in the data file.
-                bool isOptional = schema.Any(r =>
-                    string.Equals(r.Source, "lookup", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(r.FlowKey, entry.Key, StringComparison.OrdinalIgnoreCase) &&
-                    !r.IsMandatory);
-
-                if (isOptional)
                     continue;
 
                 bool hasColumn = headers.Any(h => string.Equals(h, column, StringComparison.OrdinalIgnoreCase));
                 if (!hasColumn)
-                    Fail(result, $"Data file is missing required column '{column}' (required by lookup '{entry.Key}').");
+                    Fail(result,
+                        $"Collection={row.Collection}, Property={row.Property}, Source={row.Source}: " +
+                        $"Required data column '{column}' (lookup '{lookupKey}') is missing from the data file.");
             }
         }
         catch (Exception ex)
         {
-            Fail(result, $"Could not read column headers for lookup column validation: {ex.Message}");
+            Fail(result, $"Could not read column headers for mandatory column validation: {ex.Message}");
         }
     }
 

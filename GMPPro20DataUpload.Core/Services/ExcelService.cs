@@ -279,11 +279,14 @@ public class ExcelService : IExcelService
             DataType    = GetCol(SchemaColumnNames.DataType),
             // IsMandatory: parsed strictly. Missing or non-TRUE/FALSE values left as
             // false here; SchemaService structural validation surfaces any real issues.
-            IsMandatory = string.Equals(isMandatoryRaw, "TRUE", StringComparison.OrdinalIgnoreCase),
+            IsMandatory = string.Equals(isMandatoryRaw, "TRUE", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(isMandatoryRaw, "YES", StringComparison.OrdinalIgnoreCase) 
+            || string.Equals(isMandatoryRaw, "1", StringComparison.OrdinalIgnoreCase),
             Source      = GetCol(SchemaColumnNames.Source),
             Flow        = NullIfEmpty(GetCol(SchemaColumnNames.Flow)),
             FlowKey     = NullIfEmpty(GetCol(SchemaColumnNames.FlowKey)),
             JsonPath    = GetCol(SchemaColumnNames.JsonPath),
+            Formula     = NullIfEmpty(GetCol(SchemaColumnNames.Formula)),
         };
     }
 

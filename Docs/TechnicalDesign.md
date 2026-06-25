@@ -368,3 +368,244 @@ The framework shall not contain format-specific status messages.
 Processing behavior shall remain unchanged.
 
 Only summary generation, statistics display, and user-facing messages shall be generalized.
+
+
+## Duplicate Detection and Validation Framework
+
+### Overview
+
+The framework shall support configurable duplicate detection and validation rules through schema configuration.
+
+Validation behavior shall not contain format-specific logic.
+
+### Duplicate Detection Configuration
+
+Duplicate detection shall be controlled through schema configuration.
+
+Schema rows with:
+
+```text
+Source = key
+```
+
+shall be used to determine whether the target record already exists.
+
+The framework shall use the configured JsonPath and schema property value to perform the existence check.
+
+Behavior:
+
+* If a matching record exists, processing shall stop for that row.
+* Row status shall be marked as Duplicate.
+* Record insertion shall be skipped.
+
+### Key Source Validation
+
+For schema rows using:
+
+```text
+Source = key
+```
+
+the framework shall validate:
+
+* Property is specified.
+* JsonPath is specified.
+* Data column exists when required.
+* Source configuration is valid.
+
+Validation shall fail if any required configuration is missing.
+
+### Filter Source Validation
+
+For schema rows using:
+
+```text
+Source = filter
+```
+
+the framework shall validate:
+
+* Property is specified.
+* FlowKey is specified.
+* Data column exists when required.
+* Source configuration is valid.
+
+Validation shall fail if any required configuration is missing.
+
+### Generic Validation Framework
+
+Validation shall be driven entirely by schema configuration.
+
+Validation logic shall not contain format-specific rules.
+
+The framework shall validate schema configuration before processing begins.
+
+#### IsMandatory Validation
+
+When:
+
+```text
+IsMandatory = TRUE
+```
+
+the framework shall validate:
+
+* Required data column exists.
+* Required value is provided.
+* Required lookup value is resolved.
+* Required source configuration is valid.
+
+When:
+
+```text
+IsMandatory = FALSE
+```
+
+missing columns or missing values shall not cause validation failure unless required by the selected source type.
+
+#### Source Validation
+
+The framework shall validate source-specific requirements.
+
+##### Source = excel
+
+Validate:
+
+* Property is specified.
+* Excel column exists when mandatory.
+
+##### Source = lookup
+
+Validate:
+
+* Lookup configuration exists.
+* Required lookup settings are configured.
+* Required lookup values are resolved.
+
+##### Source = compute
+
+Validate:
+
+* Compute rule is supported.
+
+##### Source = settings
+
+Validate:
+
+* FlowKey is specified.
+* Requested setting exists.
+
+##### Source = filter
+
+Validate:
+
+* FlowKey is specified.
+* JsonPath is specified.
+* Required data column exists when mandatory.
+
+##### Source = key
+
+Validate:
+
+* JsonPath is specified.
+* Required data column exists when mandatory.
+
+##### Source = auto
+
+Validate:
+
+* Auto-generated value configuration is valid.
+
+##### Source = formula
+
+Validate:
+
+* Formula is specified.
+* Formula syntax is valid.
+* Formula dependencies are available.
+
+#### Formula Dependency Validation
+
+For schema rows using:
+
+```text
+Source = formula
+```
+
+all referenced variables shall be defined in schema rows appearing before the formula row.
+
+Validation shall fail when a formula depends on a value defined later in the schema.
+
+#### Array Validation
+
+Array processing shall follow IsMandatory rules.
+
+When:
+
+```text
+IsMandatory = TRUE
+```
+
+all required lookup items must be resolved successfully.
+
+When:
+
+```text
+IsMandatory = FALSE
+```
+
+unresolved lookup items shall be ignored and processing shall continue.
+
+#### Validation Error Reporting
+
+Validation failures shall include meaningful messages identifying:
+
+* Property
+* Source
+* Collection
+* Reason for failure
+
+#### Format Independence
+
+Validation logic shall not contain format-specific rules.
+
+Examples of rules that shall not exist:
+
+* User-specific validation
+* Material-specific validation
+* Department-specific validation
+* Designation-specific validation
+
+All validation behavior shall be derived from schema configuration.
+
+
+### Null-Safe Parent Lookup Handling
+
+Lookup processing shall safely handle missing parent objects.
+
+If an expected parent object is null:
+
+* Processing shall not throw an exception.
+* Validation failure shall be reported with a meaningful message.
+* Row processing shall continue for remaining rows.
+
+### Multiple Lookup Match Handling
+
+When a lookup returns multiple matching records:
+
+* The first matching record shall be selected.
+* Processing shall continue without failure.
+* Additional matching records shall be ignored.
+
+This behavior shall be applied consistently across all formats.
+
+### Backward Compatibility
+
+Existing lookup processing behavior shall remain unchanged wherever possible.
+
+This enhancement focuses on:
+
+* Configuration-driven duplicate detection.
+* Configuration-driven validation.
+* Safer lookup handling.
+* Consistent multiple-match behavior.

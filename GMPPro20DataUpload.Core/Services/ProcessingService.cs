@@ -247,7 +247,7 @@ public class ProcessingService : IProcessingService
         List<SchemaRow> collectionRows = _schemaService.GetRowsForCollection(schema, collection);
         JsonNode doc = _templateService.LoadTemplateAsNode(templateDirectory, collection);
 
-        // Determine lookup key (first source=excel row)
+        // Determine lookup key (first source=key row)
         SchemaRow? lookupRow = GetLookupKey(collectionRows);
         string? cacheKey = null;
         bool isExisting = false;
@@ -371,11 +371,11 @@ public class ProcessingService : IProcessingService
                 }
             }
 
-            // masterUsers duplicate: signal a message for the output Excel
-            if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
+            // A Source=key row was configured: an existing record means this row is a duplicate.
+            if (lookupRow is not null)
                 return "Duplicate";
 
-            // masterDesignations reuse: silent (no message)
+            // No Source=key row: reuse the existing record silently.
             return null;
         }
     }
@@ -399,6 +399,11 @@ public class ProcessingService : IProcessingService
             if (string.Equals(row.FlowKey, "moduleCode", StringComparison.OrdinalIgnoreCase))
                 return ctx.ModuleCode;
             return string.Empty;
+        }
+
+        if (string.Equals(row.Source, "key", StringComparison.OrdinalIgnoreCase))
+        {
+            return dataRow.TryGetValue(row.Property, out string? kv) ? kv : string.Empty;
         }
 
         if (string.Equals(row.Source, "excel", StringComparison.OrdinalIgnoreCase))
@@ -660,7 +665,9 @@ public class ProcessingService : IProcessingService
     {
         JsonNode? targetNode = NavigateToJsonPath(doc, targetPath);
         if (targetNode is not JsonObject targetObj)
-            return;
+            throw new InvalidOperationException(
+                $"Parent object at path '{targetPath}' was null or not an object. " +
+                $"Verify the template and schema JsonPath values.");
 
         foreach (KeyValuePair<string, string?> entry in mappings)
         {
@@ -762,7 +769,7 @@ public class ProcessingService : IProcessingService
 
     private static SchemaRow? GetLookupKey(List<SchemaRow> rows) =>
         rows.FirstOrDefault(r =>
-            string.Equals(r.Source, "excel", StringComparison.OrdinalIgnoreCase));
+            string.Equals(r.Source, "key", StringComparison.OrdinalIgnoreCase));
 
     private static string ExtractId(string jsonDoc)
     {

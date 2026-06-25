@@ -1,6 +1,7 @@
 using GMPPro20DataUpload.Core.Interfaces;
 using GMPPro20DataUpload.Models;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GMPPro20DataUpload.Core.Services;
 
@@ -10,7 +11,7 @@ public class SchemaService : ISchemaService
         new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object" };
 
     private static readonly HashSet<string> ValidSources =
-        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup", "settings" };
+        new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup", "settings", "key", "filter", "formula" };
 
     private static readonly HashSet<string> ValidFlowActions =
         new(StringComparer.OrdinalIgnoreCase) { "publish", "consume" };
@@ -87,7 +88,7 @@ public class SchemaService : ISchemaService
                 errors.AppendLine($"{loc}: DataType '{row.DataType}' is invalid. Expected: text | integer | datetime | objectid.");
 
             if (string.IsNullOrWhiteSpace(row.Source) || !ValidSources.Contains(row.Source))
-                errors.AppendLine($"{loc}: Source '{row.Source}' is invalid. Expected: excel | compute | auto.");
+                errors.AppendLine($"{loc}: Source '{row.Source}' is invalid. Expected: excel | compute | auto | update | lookup | settings | key | filter | formula.");
 
             if (string.IsNullOrWhiteSpace(row.JsonPath))
                 errors.AppendLine($"{loc}: JsonPath must not be empty.");
@@ -104,7 +105,48 @@ public class SchemaService : ISchemaService
                 string.IsNullOrWhiteSpace(row.FlowKey))
                 errors.AppendLine($"{loc}: FlowKey must not be empty when Source is 'settings'.");
 
+            if (string.Equals(row.Source, "filter", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(row.FlowKey))
+                errors.AppendLine($"{loc}: FlowKey must not be empty when Source is 'filter'.");
+
+            if (string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(row.FlowKey))
+                errors.AppendLine($"{loc}: FlowKey must not be empty when Source is 'lookup'.");
+
+            if (string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(row.Formula))
+                errors.AppendLine($"{loc}: Formula must not be empty when Source is 'formula'.");
+
             errorCount++;
+        }
+
+        // Formula dependency validation: all {Variable} references in a formula must appear
+        // as Property values in schema rows that precede the formula row within the same collection.
+        for (int i = 0; i < rows.Count; i++)
+        {
+            SchemaRow row = rows[i];
+            if (!string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (string.IsNullOrWhiteSpace(row.Formula))
+                continue; // Missing formula already reported above.
+
+            string loc = $"Row {i + 2} (Collection={row.Collection}, Property={row.Property})";
+
+            var priorProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int j = 0; j < i; j++)
+            {
+                if (string.Equals(rows[j].Collection, row.Collection, StringComparison.OrdinalIgnoreCase))
+                    priorProperties.Add(rows[j].Property);
+            }
+
+            foreach (Match match in Regex.Matches(row.Formula!, @"\{(\w+)\}"))
+            {
+                string dependency = match.Groups[1].Value;
+                if (!priorProperties.Contains(dependency))
+                    errors.AppendLine(
+                        $"{loc}: Formula dependency '{{dependency}}' is not defined before this row."
+                            .Replace("{dependency}", dependency));
+            }
         }
 
         if (errors.Length > 0)
