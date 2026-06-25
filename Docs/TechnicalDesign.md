@@ -701,3 +701,101 @@ Formula processing shall fail with meaningful messages when:
 ### Future Enhancements
 
 Advanced functions, conditional expressions, mathematical operators, and custom functions are outside the scope of this version.
+
+
+## Request Code Prefix Configuration
+
+### Overview
+
+Request code prefix generation shall be configuration-driven.
+
+The framework shall not depend on hardcoded module prefix mappings.
+
+### Format Configuration
+
+Each format configuration shall define the request code prefix.
+
+Example:
+
+```text
+Format Name    : USERS
+Module Code    : USERS
+Request Prefix : USR
+```
+
+### Request Code Generation
+
+Request code generation shall use the configured request prefix from the selected format.
+
+Example:
+
+```text
+USR1947
+```
+
+### Validation
+
+Format configuration validation shall ensure:
+
+* Request prefix is configured.
+* Request prefix is not empty.
+* Request prefix is unique when required.
+
+---
+
+## Generic Settings Configuration
+
+### Overview
+
+Settings-based values shall be configuration-driven.
+
+The framework shall support resolving settings using schema configuration.
+
+### Settings Resolution
+
+Schema rows with:
+
+```text
+Source = settings
+```
+
+shall resolve values using the configured FlowKey.
+
+Example:
+
+```text
+FlowKey = moduleCode
+```
+
+### Benefits
+
+* Removes hardcoded setting resolution.
+* Supports future format-level settings.
+* Reduces code changes for new configuration values.
+
+### Future Enhancements
+
+Additional settings may be added as required.
+
+---
+
+## Legacy Code and Configuration Cleanup
+
+### Overview
+
+Unused code, configuration, and schema artifacts shall be removed after all formats are migrated and validated.
+
+### Objective
+
+Simplify maintenance and reduce unnecessary complexity.
+
+### Examples
+
+* Obsolete configuration entries.
+* Unused schema columns.
+* Deprecated processing logic.
+* Unused application settings.
+
+### Validation
+
+Cleanup activities shall be performed only after confirming no active format depends on the functionality.

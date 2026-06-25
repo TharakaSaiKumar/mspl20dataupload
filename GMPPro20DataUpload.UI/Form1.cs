@@ -147,6 +147,12 @@ public partial class Form1 : Form
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(_selectedFormat.RequestPrefix))
+        {
+            AppendStatus("Selected format has no RequestPrefix configured.");
+            return;
+        }
+
         string templateFilePath = Path.Combine(_appSettings.TemplateDirectory, _selectedFormat.TemplateFile);
         if (!File.Exists(templateFilePath))
         {
@@ -262,6 +268,7 @@ public partial class Form1 : Form
                 _appSettings.TemplateDirectory,
                 outputPath,
                 _selectedFormat.ModuleCode,
+                _selectedFormat.RequestPrefix,
                 _mongoConfig,
                 progress,
                 _cts.Token);

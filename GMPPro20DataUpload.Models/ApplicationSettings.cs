@@ -16,23 +16,6 @@ public class ApplicationSettings
     /// </summary>
     public string FormatsFile { get; set; } = "formats.json";
 
-    /// <summary>Maps module codes to reference prefixes (e.g. USERS → USR).</summary>
-    public Dictionary<string, string> ModuleMappings { get; set; } = new();
-
     /// <summary>Maps lookup keys to their lookup definitions (e.g. activeStatus, primaryUnit).</summary>
     public Dictionary<string, LookupMapping> LookupMappings { get; set; } = new();
-
-    /// <summary>
-    /// Returns the module prefix for the given module code.
-    /// Throws InvalidOperationException if no mapping is found.
-    /// </summary>
-    public string GetModulePrefix(string moduleCode)
-    {
-        if (ModuleMappings.TryGetValue(moduleCode, out string? prefix))
-            return prefix;
-
-        throw new InvalidOperationException(
-            $"No module mapping found for moduleCode '{moduleCode}'. " +
-            "Check Application:ModuleMappings in appsettings.json.");
-    }
 }

@@ -46,6 +46,7 @@ public class ProcessingService : IProcessingService
         string templateDirectory,
         string outputPath,
         string moduleCode,
+        string requestPrefix,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -57,10 +58,9 @@ public class ProcessingService : IProcessingService
             throw new InvalidOperationException(
                 "moduleCode must not be empty. Ensure a format with a valid ModuleCode is selected.");
 
-        if (!_appSettings.ModuleMappings.ContainsKey(moduleCode))
+        if (string.IsNullOrWhiteSpace(requestPrefix))
             throw new InvalidOperationException(
-                $"No module mapping found for moduleCode '{moduleCode}'. " +
-                "Add it to Application:ModuleMappings in appsettings.json.");
+                "requestPrefix must not be empty. Ensure the selected format has a RequestPrefix configured.");
 
         // -----------------------------------------------------------------------
         // Initialise run state
@@ -91,10 +91,13 @@ public class ProcessingService : IProcessingService
 
         string activeStatusId = await _mongoService.GetActiveStatusIdAsync();
 
-        // Generate requestCode
-        string modulePrefix = _appSettings.GetModulePrefix(moduleCode);
+        // Generate requestCode using the format-configured prefix.
         int seq = await _mongoService.GetNextSequenceAsync(moduleCode);
-        ctx.RequestCode = modulePrefix + FormatSequence(seq);
+        ctx.RequestCode = requestPrefix + FormatSequence(seq);
+
+        // Populate the generic settings dictionary for Source=settings schema rows.
+        ctx.Settings["moduleCode"]    = ctx.ModuleCode;
+        ctx.Settings["requestPrefix"] = requestPrefix;
 
         // Build and insert usrRequestBasicInfo (once per upload)
         await SetupRequestBasicInfoAsync(schema, templateDirectory, ctx, activeStatusId);
@@ -164,9 +167,23 @@ public class ProcessingService : IProcessingService
             if (string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
                 continue; // resolved in pre-pass above
 
-            string value = string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase)
-                ? EvaluateFormula(row, resolved, ctx)
-                : ComputeValue(row, resolved, ctx, activeStatusId, rowNumber: 0);
+            string value;
+            if (string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase))
+                value = EvaluateFormula(row, resolved, ctx);
+            else if (string.Equals(row.Source, "settings", StringComparison.OrdinalIgnoreCase))
+            {
+                string key = row.FlowKey ?? string.Empty;
+                if (ctx.Settings.TryGetValue(key, out string? sv))
+                    value = sv;
+                else if (row.IsMandatory)
+                    throw new InvalidOperationException(
+                        $"Settings resolution failed for property '{row.Property}' in collection '{row.Collection}'. " +
+                        $"FlowKey '{key}' is not a recognised setting.");
+                else
+                    value = string.Empty;
+            }
+            else
+                value = ComputeValue(row, resolved, ctx, activeStatusId, rowNumber: 0);
             resolved[row.Property] = value;
 
             if (!string.IsNullOrEmpty(row.Flow) &&
@@ -399,8 +416,15 @@ public class ProcessingService : IProcessingService
     {
         if (string.Equals(row.Source, "settings", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(row.FlowKey, "moduleCode", StringComparison.OrdinalIgnoreCase))
-                return ctx.ModuleCode;
+            string key = row.FlowKey ?? string.Empty;
+            if (ctx.Settings.TryGetValue(key, out string? settingValue))
+                return settingValue;
+
+            if (row.IsMandatory)
+                throw new InvalidOperationException(
+                    $"Settings resolution failed for property '{row.Property}' in collection '{row.Collection}'. " +
+                    $"FlowKey '{key}' is not a recognised setting.");
+
             return string.Empty;
         }
 

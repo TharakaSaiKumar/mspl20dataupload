@@ -15,6 +15,9 @@ public class FormatConfiguration
     /// <summary>Module code used during processing (e.g. USERS, DESIGNATIONS).</summary>
     public string ModuleCode { get; set; } = string.Empty;
 
+    /// <summary>Request code prefix used when generating the request code for this format (e.g. USR, DSG).</summary>
+    public string RequestPrefix { get; set; } = string.Empty;
+
     /// <summary>
     /// Schema Excel filename. Resolved relative to ApplicationSettings.TemplateDirectory at runtime.
     /// </summary>

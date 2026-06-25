@@ -29,4 +29,11 @@ public class ProcessingContext
 
     /// <summary>Per-row outcomes. Written to the output Excel as Status and Message columns.</summary>
     public List<ProcessResult> Results { get; set; } = new();
+
+    /// <summary>
+    /// Generic settings dictionary populated at the start of each run.
+    /// Used by Source=settings schema rows to resolve values via FlowKey (case-insensitive).
+    /// Initial keys: moduleCode, requestPrefix.
+    /// </summary>
+    public Dictionary<string, string> Settings { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

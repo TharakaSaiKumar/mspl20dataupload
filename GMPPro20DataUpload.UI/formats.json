@@ -3,6 +3,7 @@
     "FormatKey": "USERS",
     "DisplayName": "Master Users",
     "ModuleCode": "USERS",
+    "RequestPrefix": "USR",
     "SchemaFile": "UsersSchema.xlsx",
     "TemplateFile": "masterUsers.json"
   }
