@@ -127,6 +127,13 @@ public class ExcelService : IExcelService
         int statusColIdx  = headerMap.Count > 0 ? headerMap.Keys.Max() + 1 : 1;
         int messageColIdx = statusColIdx + 1;
 
+        // Detect optional ObjectId column (case-insensitive). Position is not fixed.
+        // When present, the framework writes the MongoDB _id for each Inserted row.
+        int? objectIdColIdx = headerMap
+            .Where(kv => string.Equals(kv.Value, "ObjectId", StringComparison.OrdinalIgnoreCase))
+            .Select(kv => (int?)kv.Key)
+            .FirstOrDefault();
+
         // Append Status and Message headers to row 1
         Row headerRow = allRows[0];
         AppendInlineCell(headerRow, statusColIdx,  "Status");
@@ -148,6 +155,14 @@ public class ExcelService : IExcelService
 
             AppendInlineCell(row, statusColIdx,  pr.Status);
             AppendInlineCell(row, messageColIdx, pr.Message);
+
+            // Write ObjectId for Inserted rows when the ObjectId column is present.
+            if (objectIdColIdx.HasValue
+                && !string.IsNullOrEmpty(pr.ObjectId)
+                && string.Equals(pr.Status, "Inserted", StringComparison.OrdinalIgnoreCase))
+            {
+                UpdateOrAppendInlineCell(row, objectIdColIdx.Value, pr.ObjectId);
+            }
         }
 
         wsPart.Worksheet.Save();
@@ -310,6 +325,49 @@ public class ExcelService : IExcelService
         };
 
         row.Append(cell);
+    }
+
+    /// <summary>
+    /// Updates the value of an existing cell at the specified 0-based column index,
+    /// or creates a new cell in the correct column order if no cell with that reference exists.
+    /// </summary>
+    private static void UpdateOrAppendInlineCell(Row row, int colIdx, string value)
+    {
+        string colLetter = ColIndexToLetter(colIdx);
+        string cellRef   = $"{colLetter}{row.RowIndex}";
+
+        Cell? existing = row.Elements<Cell>().FirstOrDefault(c =>
+            string.Equals(c.CellReference?.Value, cellRef, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            existing.DataType     = CellValues.InlineString;
+            existing.CellValue    = null;
+            existing.InlineString = new InlineString { Text = new Text(value) };
+        }
+        else
+        {
+            InsertCellInOrder(row, colIdx, value);
+        }
+    }
+
+    private static void InsertCellInOrder(Row row, int colIdx, string value)
+    {
+        string colLetter = ColIndexToLetter(colIdx);
+        string cellRef = $"{colLetter}{row.RowIndex}";
+
+        var cell = new Cell
+        {
+            CellReference = cellRef,
+            DataType = CellValues.InlineString,
+            InlineString = new InlineString { Text = new Text(value) }
+        };
+
+        Cell? refCell = row.Elements<Cell>()
+           .FirstOrDefault(c =>
+           CellRefToColIndex(c.CellReference?.Value) > colIdx);
+
+        row.InsertBefore(cell, refCell);
     }
 
     private static string ColIndexToLetter(int index)

@@ -799,3 +799,70 @@ Simplify maintenance and reduce unnecessary complexity.
 ### Validation
 
 Cleanup activities shall be performed only after confirming no active format depends on the functionality.
+
+
+
+## Optional ObjectId Write-Back
+
+### Overview
+
+The framework shall support optional ObjectId write-back to the output Excel file.
+
+ObjectId write-back shall be controlled by the presence of an ObjectId column in the input template.
+
+### Template Configuration
+
+If the input template contains an ObjectId column:
+
+ObjectId
+
+the framework shall populate the generated MongoDB document identifier for successfully inserted records.
+
+If the ObjectId column does not exist:
+
+- Processing shall continue normally.
+- No ObjectId write-back shall occur.
+
+### Column Detection
+
+The ObjectId column position shall not be fixed.
+
+The framework shall identify the ObjectId column using the column header name.
+
+This allows the ObjectId column to appear in any position within the template.
+
+### Processing Behavior
+
+The framework shall determine whether ObjectId write-back is required before row processing begins.
+
+A runtime flag may be maintained to indicate whether ObjectId updates are required.
+
+### Inserted Records
+
+For successfully inserted records:
+
+- The generated MongoDB _id value shall be captured.
+- The ObjectId column shall be updated with the generated value.
+
+### Failed Records
+
+For failed records:
+
+- ObjectId shall remain blank.
+
+### Duplicate Records
+
+Duplicate record handling is outside the scope of this version.
+
+Only successfully inserted records shall participate in ObjectId write-back.
+
+### Benefits
+
+- Supports downstream traceability.
+- Supports future Version 1 back-sync scenarios.
+- Works only when requested by the template.
+- Does not impact existing templates.
+
+### Backward Compatibility
+
+Templates without an ObjectId column shall continue to work without modification.

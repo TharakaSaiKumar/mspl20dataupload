@@ -17,4 +17,11 @@ public class ProcessResult
 
     /// <summary>Detail message written to the output Excel.</summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// MongoDB _id of the last newly inserted document for this row.
+    /// Populated only for Inserted rows; null for Failed and Duplicate rows.
+    /// Written back to the ObjectId column in the output Excel when that column is present.
+    /// </summary>
+    public string? ObjectId { get; set; }
 }

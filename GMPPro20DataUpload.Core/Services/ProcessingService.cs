@@ -241,8 +241,13 @@ public class ProcessingService : IProcessingService
 
             result.IsSuccess = true;
             result.Status    = hasDuplicate ? "Duplicate" : "Inserted";
-            //result.Message   = hasDuplicate ? "Duplicate" : string.Empty;
-            result.Message = string.Empty;
+            result.Message   = string.Empty;
+
+            // Capture the last newly inserted _id for ObjectId write-back.
+            // Only populated for Inserted rows; Duplicate handling is out of scope.
+            if (!hasDuplicate)
+                result.ObjectId = rowMessages.LastOrDefault(
+                    m => !string.Equals(m, "Duplicate", StringComparison.OrdinalIgnoreCase));
         }
         catch (Exception ex)
         {
@@ -375,7 +380,7 @@ public class ProcessingService : IProcessingService
                     collection, newId, updateRow.JsonPath, newId, updateRow.DataType);
             }
 
-            return null;
+            return newId;
         }
         else
         {
