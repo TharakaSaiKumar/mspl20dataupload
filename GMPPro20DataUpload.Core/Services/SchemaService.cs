@@ -120,8 +120,25 @@ public class SchemaService : ISchemaService
             errorCount++;
         }
 
-        // Formula dependency validation: all {Variable} references in a formula must appear
-        // as Property values in schema rows that precede the formula row within the same collection.
+        // Formula dependency validation: all {placeholder} references in a formula must resolve
+        // to a property defined before the formula row in schema order, or to a known system key.
+        //
+        // Reachable set for a formula row at index i in collection C:
+        //   1. All properties from collections that appear before C in collection order.
+        //   2. All properties from rows within C that appear before row i.
+        //   3. Known system-published keys: requestCode, requestId, moduleCode.
+        var systemKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "requestCode", "requestId", "moduleCode" };
+
+        // Build collection order from the full row list.
+        var collectionOrder = new List<string>();
+        var seenCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (SchemaRow r in rows)
+        {
+            if (seenCollections.Add(r.Collection))
+                collectionOrder.Add(r.Collection);
+        }
+
         for (int i = 0; i < rows.Count; i++)
         {
             SchemaRow row = rows[i];
@@ -132,20 +149,34 @@ public class SchemaService : ISchemaService
 
             string loc = $"Row {i + 2} (Collection={row.Collection}, Property={row.Property})";
 
-            var priorProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Determine which collections precede this formula row's collection.
+            int collectionIndex = collectionOrder.IndexOf(
+                collectionOrder.First(c => string.Equals(c, row.Collection, StringComparison.OrdinalIgnoreCase)));
+            var priorCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int k = 0; k < collectionIndex; k++)
+                priorCollections.Add(collectionOrder[k]);
+
+            // Build the full reachable property set.
+            var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            reachable.UnionWith(systemKeys);
+
             for (int j = 0; j < i; j++)
             {
+                // Properties from earlier collections (all their rows are reachable).
+                if (priorCollections.Contains(rows[j].Collection))
+                    reachable.Add(rows[j].Property);
+
+                // Properties from the same collection that appear before this row.
                 if (string.Equals(rows[j].Collection, row.Collection, StringComparison.OrdinalIgnoreCase))
-                    priorProperties.Add(rows[j].Property);
+                    reachable.Add(rows[j].Property);
             }
 
             foreach (Match match in Regex.Matches(row.Formula!, @"\{(\w+)\}"))
             {
                 string dependency = match.Groups[1].Value;
-                if (!priorProperties.Contains(dependency))
+                if (!reachable.Contains(dependency))
                     errors.AppendLine(
-                        $"{loc}: Formula dependency '{{dependency}}' is not defined before this row."
-                            .Replace("{dependency}", dependency));
+                        $"{loc}: Formula dependency '{dependency}' is not defined before this row.");
             }
         }
 

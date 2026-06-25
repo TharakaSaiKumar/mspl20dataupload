@@ -609,3 +609,95 @@ This enhancement focuses on:
 * Configuration-driven validation.
 * Safer lookup handling.
 * Consistent multiple-match behavior.
+
+## Dynamic Formula Support
+
+### Overview
+
+The framework shall support schema-driven formula evaluation.
+
+Formula processing shall be configurable through schema without requiring code changes.
+
+### Formula Source
+
+Schema rows with:
+
+```text
+Source = formula
+```
+
+shall evaluate the expression defined in the Formula column.
+
+### Formula Column
+
+A new schema column shall be introduced:
+
+```text
+Formula
+```
+
+This column contains the formula expression to evaluate.
+
+### Supported Syntax
+
+Formula expressions shall support placeholder replacement using:
+
+```text
+{propertyName}
+```
+
+Values may reference:
+
+* Current row values
+* Previously computed values
+* Published flow values
+* System-generated values
+
+### Formula Dependency Rules
+
+A formula may reference only values that are available before the formula row is processed.
+
+Validation shall ensure:
+
+* Referenced property exists.
+* Referenced property appears before the formula row.
+* Referenced flow value exists.
+
+Validation shall fail if dependency order is invalid.
+
+### Formula Evaluation
+
+Formula processing shall replace placeholders with resolved values and generate the final result.
+
+The framework shall not contain format-specific formula logic.
+
+### Initial Supported Formulas
+
+The framework shall support existing formula scenarios including:
+
+```text
+{designationCode} - {designationName}
+```
+
+```text
+{departmentCode} - {departmentName}
+```
+
+```text
+{blockCode} - {blockName}
+```
+
+Advanced formatting such as {sno:00} is outside the current scope.
+
+### Error Handling
+
+Formula processing shall fail with meaningful messages when:
+
+* Referenced property does not exist.
+* Dependency order is invalid.
+* Placeholder cannot be resolved.
+* Formula syntax is invalid.
+
+### Future Enhancements
+
+Advanced functions, conditional expressions, mathematical operators, and custom functions are outside the scope of this version.

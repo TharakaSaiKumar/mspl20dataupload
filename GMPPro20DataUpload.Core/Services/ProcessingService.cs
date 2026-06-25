@@ -2,6 +2,7 @@ using GMPPro20DataUpload.Core.Interfaces;
 using GMPPro20DataUpload.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace GMPPro20DataUpload.Core.Services;
 
@@ -163,7 +164,9 @@ public class ProcessingService : IProcessingService
             if (string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
                 continue; // resolved in pre-pass above
 
-            string value = ComputeValue(row, resolved, ctx, activeStatusId, rowNumber: 0);
+            string value = string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase)
+                ? EvaluateFormula(row, resolved, ctx)
+                : ComputeValue(row, resolved, ctx, activeStatusId, rowNumber: 0);
             resolved[row.Property] = value;
 
             if (!string.IsNullOrEmpty(row.Flow) &&
@@ -437,6 +440,9 @@ public class ProcessingService : IProcessingService
             return ComputeValue(row, resolved, ctx, activeStatusId, rowNumber, formattedRef, referenceNum);
         }
 
+        if (string.Equals(row.Source, "formula", StringComparison.OrdinalIgnoreCase))
+            return EvaluateFormula(row, resolved, ctx);
+
         return string.Empty;
     }
 
@@ -484,6 +490,45 @@ public class ProcessingService : IProcessingService
         }
 
         return string.Empty;
+    }
+
+    // =========================================================================
+    // Formula evaluation
+    // =========================================================================
+
+    /// <summary>
+    /// Evaluates a Source=formula row by replacing {placeholder} tokens with
+    /// resolved values.  Resolution order:
+    ///   1. The per-row resolved dictionary (same-collection and prior-collection values).
+    ///   2. FlowContext (system-published values such as requestCode, requestId, moduleCode).
+    /// Throws InvalidOperationException if any placeholder cannot be resolved.
+    /// </summary>
+    private string EvaluateFormula(
+        SchemaRow row,
+        Dictionary<string, string> resolved,
+        ProcessingContext ctx)
+    {
+        string formula = row.Formula ?? string.Empty;
+        if (string.IsNullOrEmpty(formula))
+            return string.Empty;
+
+        return Regex.Replace(formula, @"\{(\w+)\}", match =>
+        {
+            string placeholder = match.Groups[1].Value;
+
+            // 1. Per-row resolved values (covers same-collection and cross-collection prior values).
+            if (resolved.TryGetValue(placeholder, out string? resolvedValue))
+                return resolvedValue;
+
+            // 2. FlowContext values (requestCode, requestId, moduleCode, and any published flow keys).
+            if (_flowService.Exists(ctx.FlowContext, placeholder))
+                return _flowService.Consume(ctx.FlowContext, placeholder) ?? string.Empty;
+
+            throw new InvalidOperationException(
+                $"Formula evaluation failed for property '{row.Property}' in collection '{row.Collection}'. " +
+                $"Placeholder '{{{placeholder}}}' could not be resolved. " +
+                $"Ensure the referenced property is defined before this row in the schema.");
+        });
     }
 
     private static string ConvertDateOfJoining(string raw)
