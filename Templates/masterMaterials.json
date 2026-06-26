@@ -1,0 +1,152 @@
+{
+  "systemData": {
+    "actualID": null,
+    "parentID": null,
+    "versionNo": "00",
+    "referenceNumber": "",
+    "sno": 1,
+    "createdOn": {
+      "$date": ""
+    },
+    "updatedOn": {
+      "$date": ""
+    },
+    "createdBy": "System",
+    "updatedBy": "System",
+    "formState": "ACTIVE",
+    "formattedReferenceNumber": "",
+    "basicInfoID": {
+      "$oid": ""
+    },
+    "statusID": {
+      "$oid": ""
+    },
+    "moduleCode": "",
+    "requestCode": "",
+    "status": "Active",
+    "cloneReferenceID": null,
+    "unitDetails": {
+      "unitID": "67164bc3f66dae36420643f6",
+      "unitName": "Default-Unit",
+      "unitCode": "Z",
+      "unitActualID": "67164bc3f66dae36420643f6",
+      "displayData": "Default-Unit"
+    },
+    "userDetails": {
+      "userID": "6718ef375d657f449e40d70a",
+      "userName": "System",
+      "userActualID": "6718ef375d657f449e40d70a",
+      "unitID": "67164bc3f66dae36420643f6",
+      "unitName": "Default-Unit",
+      "departmentID": "67164d40f66dae36420643fe",
+      "departmentName": "Default-Department",
+      "designationID": "67164e95f66dae364206440e",
+      "designationNane": "Default-Designation",
+      "displayData": "System",
+      "departmentActualID": ""
+    },
+    "formattedName": "Calibration Solution -Calibration Solution -Calibration Solution (Calibration SolutionCalibration Solution)",
+    "userModuleCode": ""
+  },
+  "materialInfo": {
+    "category": {
+      "item": "",
+      "itemCode": "",
+      "itemID": "",
+      "itemActualID": null,
+      "isActive": null,
+      "displayData": "",
+      "systemCode": ""
+    },
+    "subCategory": {
+      "itemID": "",
+      "itemCode": "",
+      "item": "",
+      "displayData": "",
+      "systemCode": ""
+    },
+    "materialName": "",
+    "materialCode": "",
+    "sdsCode": null,
+    "materialForm": null,
+    "primaryUom": {
+      "item": "Feet",
+      "itemCode": "FEET",
+      "itemID": "8",
+      "itemActualID": "8",
+      "isActive": null,
+      "displayData": "Feet",
+      "systemCode": null
+    },
+    "storageCondition": null,
+    "remarks": "",
+    "formattedName": "",
+    "ksmKimMaterial": null,
+    "usageUom": {
+      "item": "Microgram",
+      "itemCode": "MICROGRAM",
+      "itemID": "13",
+      "itemActualID": "13",
+      "isActive": null,
+      "displayData": "Microgram",
+      "systemCode": null
+    },
+    "usageConversionFactor": "1"
+  },
+  "uomConversions": null,
+  "materialOtherNames": null,
+  "materialAdditionalInformation": null,
+  "unitAssignments": [
+    {
+      "unitID": "67164bc3f66dae36420643f6",
+      "unitActualID": "67164bc3f66dae36420643f6",
+      "unitName": "Default-Unit",
+      "unitCode": "Z",
+      "displayData": "Default-Unit (Z)"
+    },
+    {
+      "unitID": "6751c0276522e8b0b0656999",
+      "unitActualID": "6751c0276522e8b0b0656999",
+      "unitName": "Unit-IV",
+      "unitCode": "D",
+      "displayData": "Unit-IV (D)"
+    }
+  ],
+  "materialAdditionalInformationHistory": null,
+  "forms": [
+    {
+      "formID": "671669ca7832cf06f468c706",
+      "formTitle": "Create New Material",
+      "formCode": "NEW_MATERIAL",
+      "formType": "MAIN_FORM"
+    }
+  ],
+  "level1Signature": {
+    "_id": "69be5f615e0c59c0cf60c3b8",
+    "actionBy": "System",
+    "actionOnDate": {
+      "$date": "2026-03-21T09:05:37.657Z"
+    },
+    "actionOnDateTime": {
+      "$date": "2026-03-21T09:05:37.657Z"
+    },
+    "designation": "Default-Designation",
+    "departmentName": "Default-Department",
+    "unitName": "Default-Unit"
+  },
+  "level2Signature": {
+    "_id": "69be606d5e0c59c0cf60c3c0",
+    "actionBy": "System",
+    "actionOnDate": {
+      "$date": "2026-03-21T09:10:05.394Z"
+    },
+    "actionOnDateTime": {
+      "$date": "2026-03-21T09:10:05.394Z"
+    },
+    "designation": "Default-Designation",
+    "departmentName": "Default-Department",
+    "unitName": "Default-Unit"
+  },
+  "isSynced": false,
+  "isSecondarySynced": false
+}

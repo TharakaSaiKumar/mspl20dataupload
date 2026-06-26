@@ -1,0 +1,24 @@
+{
+  "secondaryUom": {
+	"item": "",
+	"itemCode": "",
+	"itemID": "",
+	"itemActualID": "",
+	"isActive": null,
+	"displayData": "",
+	"systemCode": null
+  },
+  "conversionValue": {
+	"$numberDecimal": ""
+  },
+  "addedBy": "System",
+  "discardedBy": null,
+  "effectiveFrom": {
+	"$date": ""
+  },
+  "effectiveTo": null,
+  "_id": null,
+  "state": "ACTIVE",
+  "isPrimary": "",
+  "isSystemAdded": "YES"
+}

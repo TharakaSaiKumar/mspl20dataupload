@@ -6,5 +6,21 @@
     "RequestPrefix": "USR",
     "SchemaFile": "UsersSchema.xlsx",
     "TemplateFile": "masterUsers.json"
-  }
+  },
+  {
+    "FormatKey": "Materials",
+    "DisplayName": "Materials",
+    "ModuleCode": "MAT",
+    "RequestPrefix": "MAT",
+    "SchemaFile": "MaterialsSchema.xlsx",
+    "TemplateFile": "masterMaterials.json"
+  },
+ {
+    "FormatKey": "uomConversions",
+    "DisplayName": "Uom Conversions",
+    "ModuleCode": "MAT",
+    "RequestPrefix": "MAT",
+    "SchemaFile": "UomConversionsSchema.xlsx",
+    "TemplateFile": "uomConversions.json"
+  }  
 ]
