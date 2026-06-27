@@ -187,6 +187,29 @@ public class ValidationService : IValidationService
                 if (!_appSettings.LookupMappings.TryGetValue(lookupKey, out LookupMapping? mapping))
                     continue; // Missing mapping is caught by SchemaService validation.
 
+                // Validate MSSQL lookup provider configuration.
+                if (string.Equals(mapping.LookupProvider, "mssql", StringComparison.OrdinalIgnoreCase))
+                {
+                    string connName = mapping.ConnectionName ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(connName))
+                    {
+                        Fail(result,
+                            $"Collection={row.Collection}, Property={row.Property}, Source={row.Source}: " +
+                            $"Lookup '{lookupKey}' uses LookupProvider=mssql but ConnectionName is not configured.");
+                        continue;
+                    }
+
+                    if (!_appSettings.ConnectionStrings.TryGetValue(connName, out string? connStr)
+                        || string.IsNullOrWhiteSpace(connStr))
+                    {
+                        Fail(result,
+                            $"Collection={row.Collection}, Property={row.Property}, Source={row.Source}: " +
+                            $"Lookup '{lookupKey}' references ConnectionName='{connName}' which is not found in ConnectionStrings configuration.");
+                    }
+
+                    continue; // MSSQL lookups do not use an InputColumn from the data file.
+                }
+
                 if (!string.Equals(mapping.InputType, "excel", StringComparison.OrdinalIgnoreCase))
                     continue; // Static lookups don't require a data column.
 

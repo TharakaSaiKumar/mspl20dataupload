@@ -1,4 +1,10 @@
 {
+  "systemData": {
+    "basicInfoID": {
+      "$oid": ""
+    },
+    "requestCode": ""
+  },
   "secondaryUom": {
 	"item": "",
 	"itemCode": "",
@@ -8,10 +14,8 @@
 	"displayData": "",
 	"systemCode": null
   },
-  "conversionValue": {
-	"$numberDecimal": ""
-  },
-  "addedBy": "System",
+  "conversionValue": 0,
+  "addedBy": "WHUSER01",
   "discardedBy": null,
   "effectiveFrom": {
 	"$date": ""

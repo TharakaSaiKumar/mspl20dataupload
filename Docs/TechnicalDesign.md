@@ -866,3 +866,209 @@ Only successfully inserted records shall participate in ObjectId write-back.
 ### Backward Compatibility
 
 Templates without an ObjectId column shall continue to work without modification.
+
+
+# Framework Enhancements
+
+## Current Processing (Existing Behavior)
+
+The current framework processes schema-driven uploads by creating new
+root documents in the target MongoDB collection.
+
+This behaviour is already implemented and shall remain unchanged. All
+enhancements described below are additional capabilities and must not
+modify or regress the existing processing flow.
+
+For the remainder of this document, the existing processing flow 
+described above shall be referred to as Master Processing Mode.
+------------------------------------------------------------------------
+
+## 1. Transaction Processing Mode
+
+### Purpose
+
+Support updating child arrays of an existing parent document instead of
+inserting a new root document.
+
+### Activation
+
+Transaction Processing Mode is enabled when the schema contains a row
+with:
+
+-   `Source = filter`
+
+Only one filter row is supported per schema.
+
+### Filter Row
+
+  Column       Purpose
+  ------------ ---------------------------------------------------
+  Collection   Target collection
+  Property     Excel property used to locate the parent document
+  FlowKey      Parent document field used for lookup
+  JsonPath     Target child array within the parent document
+
+Example:
+
+  --------------------------------------------------------------------------------------------
+  Collection        Property       Source         FlowKey                     JsonPath
+  ----------------- -------------- -------------- --------------------------- ----------------
+  masterMaterials   materialCode   filter         materialInfo.materialCode   uomConversions
+
+  --------------------------------------------------------------------------------------------
+
+### Processing
+
+For every Excel row:
+
+1.  Read the filter value from Excel.
+2.  Locate the parent document using `FlowKey`.
+3.  If the parent document is not found:
+    -   Mark the row as Failed.
+    -   Continue processing remaining rows.
+4.  Process the configured JSON template using the existing schema
+    engine to build the child object.
+5.  If the target array is `null` or does not exist, initialize it as an
+    empty array.
+6.  Append the generated child object to the target array.
+7.  Persist the change using MongoDB atomic array update (`$push`)
+    without replacing the parent document.
+
+The Collection value from the Source=filter row identifies the MongoDB 
+collection containing the parent document. The framework shall use this 
+collection when locating and updating the parent document.
+
+------------------------------------------------------------------------
+
+## 2. Array Lookup Enhancement
+
+Existing lookup functionality for `object` and `objectid` remains
+unchanged.
+
+Enhancement:
+
+-   `DataType = array`
+-   `Source = lookup`
+
+Behaviour:
+
+-   Excel contains comma-separated lookup values.
+-   Trim whitespace from every value.
+-   Remove duplicate values.
+-   Resolve each unique value using the configured lookup provider.
+-   For each resolved value, clone the array item template from the
+    configured JSON template, populate mapped properties, and append the
+    completed object to the target array.
+-   If `IsMandatory = FALSE` and the column or value is missing, skip
+    processing.
+-   If no array items are generated after processing (for example, optional 
+    lookup with no values), the framework shall remove the placeholder template 
+    object and set the target property to null instead of persisting an empty 
+    object or empty array.
+    
+Example template:
+
+``` json
+"unitAssignments": [
+  {
+    "unitID": "",
+    "unitActualID": "",
+    "unitName": "",
+    "unitCode": "",
+    "displayData": ""
+  }
+]
+```
+
+------------------------------------------------------------------------
+
+## 3. Optional Array Handling
+
+When `IsMandatory = FALSE`:
+
+-   Missing column → skip processing.
+-   Blank value → skip processing.
+-   No validation error.
+-   No processing error.
+-   Existing/default JSON value remains unchanged.
+
+------------------------------------------------------------------------
+
+## 4. Excel Default Values
+
+Reuse the existing `Formula` column.
+
+Applies only to `Source = excel`.
+
+Rules:
+
+-   If `IsMandatory = TRUE`, the Excel column must exist.
+-   If the column exists and contains a value, use the Excel value.
+-   If the column exists but the value is blank:
+    -   Use the Formula value when specified.
+    -   Otherwise preserve existing behaviour.
+-   If `IsMandatory = FALSE` and the column does not exist:
+    -   Use the Formula value when specified.
+    -   Otherwise preserve existing behaviour.
+
+------------------------------------------------------------------------
+
+## 5. Generic Lookup Provider Enhancement
+
+Lookup processing shall be provider-independent.
+
+Supported providers:
+
+-   MongoDB (existing)
+-   MSSQL (new)
+
+Schema remains unchanged.
+
+Lookup configuration determines the provider.
+
+Example connection string:
+
+``` json
+"ConnectionStrings": {
+  "UomSql": "Server=...;Database=...;..."
+}
+```
+
+Example lookup configuration:
+
+``` json
+"primaryUom": {
+  "LookupProvider": "mssql",
+  "ConnectionName": "UomSql",
+  "Query": "SELECT UOMID,UOMCode,UOMDesc,UOMType,BaseConversion FROM root.MasterUOMs",
+  "InputType": "excel",
+  "InputColumn": "primaryUomCode",
+  "LookupPath": "UOMCode",
+  "OutputType": "object",
+  "Mappings": {
+    "item": "UOMDesc",
+    "itemCode": "UOMCode",
+    "itemID": "UOMID",
+    "itemActualID": "UOMID",
+    "displayData": "UOMDesc"
+  }
+}
+```
+
+If LookupProvider is not specified, the framework shall default to the 
+existing MongoDB lookup behaviour to maintain backward compatibility.
+
+The lookup engine shall obtain records from the configured provider and
+continue using the existing mapping logic. No format-specific
+implementation is permitted.
+
+------------------------------------------------------------------------
+
+## Design Principles
+
+-   Existing processing must remain unchanged.
+-   Generic implementation only.
+-   Schema-driven.
+-   Configuration-driven.
+-   Backward compatible.
+-   No format-specific logic.

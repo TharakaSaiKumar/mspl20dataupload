@@ -31,4 +31,21 @@ public class LookupMapping
     /// A null value writes JSON null; a non-null value navigates the found document.
     /// </summary>
     public Dictionary<string, string?>? Mappings { get; set; }
+
+    /// <summary>
+    /// Lookup provider. Values: "mongodb" (default) or "mssql".
+    /// When null or absent, the existing MongoDB behaviour applies.
+    /// </summary>
+    public string? LookupProvider { get; set; }
+
+    /// <summary>
+    /// Named key into ApplicationSettings.ConnectionStrings. Required when LookupProvider=mssql.
+    /// </summary>
+    public string? ConnectionName { get; set; }
+
+    /// <summary>
+    /// Full SQL query string. Required when LookupProvider=mssql.
+    /// Example: SELECT UOMID,UOMCode,UOMDesc FROM root.MasterUOMs
+    /// </summary>
+    public string? Query { get; set; }
 }

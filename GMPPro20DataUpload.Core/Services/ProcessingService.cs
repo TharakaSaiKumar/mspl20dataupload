@@ -16,11 +16,12 @@ public class ProcessingService : IProcessingService
     private readonly IMongoService _mongoService;
     private readonly IFlowService _flowService;
     private readonly ICacheService _cacheService;
+    private readonly ISqlService _sqlService;
     private readonly ApplicationSettings _appSettings;
 
-    // Per-run insert counters — reset at start of each ProcessAsync call.
-    private int _designationInsertSeq;
-    private int _userInsertSeq;
+    // Per-run insert counters keyed by collection name — reset at start of each ProcessAsync call.
+    private readonly Dictionary<string, int> _insertSequences =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public ProcessingService(
         ISchemaService schemaService,
@@ -29,6 +30,7 @@ public class ProcessingService : IProcessingService
         IMongoService mongoService,
         IFlowService flowService,
         ICacheService cacheService,
+        ISqlService sqlService,
         ApplicationSettings appSettings)
     {
         _schemaService = schemaService;
@@ -37,6 +39,7 @@ public class ProcessingService : IProcessingService
         _mongoService = mongoService;
         _flowService = flowService;
         _cacheService = cacheService;
+        _sqlService = sqlService;
         _appSettings = appSettings;
     }
 
@@ -47,6 +50,7 @@ public class ProcessingService : IProcessingService
         string outputPath,
         string moduleCode,
         string requestPrefix,
+        string templateFile,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -65,8 +69,7 @@ public class ProcessingService : IProcessingService
         // -----------------------------------------------------------------------
         // Initialise run state
         // -----------------------------------------------------------------------
-        _designationInsertSeq = 0;
-        _userInsertSeq = 0;
+        _insertSequences.Clear();
 
         _cacheService.Clear();
         _flowService.Clear(new FlowContext()); // clear not used on the real context yet
@@ -99,8 +102,22 @@ public class ProcessingService : IProcessingService
         ctx.Settings["moduleCode"]    = ctx.ModuleCode;
         ctx.Settings["requestPrefix"] = requestPrefix;
 
-        // Build and insert usrRequestBasicInfo (once per upload)
-        await SetupRequestBasicInfoAsync(schema, templateDirectory, ctx, activeStatusId);
+        // Phase 1: Build and insert usrRequestBasicInfo (once per upload).
+        // Conditional — only if the schema contains rows for this collection.
+        bool hasRequestBasicInfo = schema.Any(r =>
+            string.Equals(r.Collection, RequestBasicInfoCollection, StringComparison.OrdinalIgnoreCase));
+
+        if (hasRequestBasicInfo)
+            await SetupRequestBasicInfoAsync(schema, templateDirectory, ctx, activeStatusId);
+
+        // -----------------------------------------------------------------------
+        // Determine processing mode.
+        // Transaction Processing Mode is active when the schema has a Source=filter row.
+        // Master Processing Mode is the default.
+        // -----------------------------------------------------------------------
+        SchemaRow? filterRow = schema.FirstOrDefault(r =>
+            string.Equals(r.Source, "filter", StringComparison.OrdinalIgnoreCase));
+        bool isTransactionMode = filterRow is not null;
 
         // -----------------------------------------------------------------------
         // Phase 2 — per-row loop (excludes usrRequestBasicInfo)
@@ -113,8 +130,9 @@ public class ProcessingService : IProcessingService
         {
             Dictionary<string, string> dataRow = dataRows[i];
 
-            ProcessResult result = await ProcessRowAsync(
-                dataRow, schema, rowCollections, templateDirectory, ctx, activeStatusId);
+            ProcessResult result = isTransactionMode
+                ? await ProcessTransactionRowAsync(dataRow, schema, filterRow!, rowCollections, templateDirectory, ctx, activeStatusId, templateFile)
+                : await ProcessRowAsync(dataRow, schema, rowCollections, templateDirectory, ctx, activeStatusId);
 
             ctx.Results.Add(result);
             ctx.ProcessedRows++;
@@ -248,6 +266,117 @@ public class ProcessingService : IProcessingService
             if (!hasDuplicate)
                 result.ObjectId = rowMessages.LastOrDefault(
                     m => !string.Equals(m, "Duplicate", StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex)
+        {
+            result.IsSuccess = false;
+            result.Status    = "Failed";
+            result.Message   = ex.Message;
+        }
+
+        return result;
+    }
+
+    // =========================================================================
+    // Transaction Processing Mode
+    // =========================================================================
+
+    private async Task<ProcessResult> ProcessTransactionRowAsync(
+        Dictionary<string, string> dataRow,
+        List<SchemaRow> schema,
+        SchemaRow filterRow,
+        List<string> childCollections,
+        string templateDirectory,
+        ProcessingContext ctx,
+        string activeStatusId,
+        string templateFile)
+    {
+        int rowNumber = dataRow.TryGetValue(ExcelService.RowNumberKey, out string? rnStr)
+            && int.TryParse(rnStr, out int rn) ? rn : 0;
+
+        var result = new ProcessResult { RowNumber = rowNumber };
+
+        try
+        {
+            // 1. Read filter value from Excel.
+            string filterValue = dataRow.TryGetValue(filterRow.Property, out string? fv)
+                ? fv?.Trim() ?? string.Empty
+                : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(filterValue))
+            {
+                result.IsSuccess = false;
+                result.Status    = "Failed";
+                result.Message   =
+                    $"Filter column '{filterRow.Property}' is missing or blank in data row {rowNumber}.";
+                return result;
+            }
+
+            // 2. Locate the parent document.
+            string? parentJson = await _mongoService.FindOneAsync(
+                filterRow.Collection, filterRow.FlowKey ?? string.Empty, filterValue);
+
+            if (parentJson is null)
+            {
+                result.IsSuccess = false;
+                result.Status    = "Failed";
+                result.Message   =
+                    $"Parent document not found in '{filterRow.Collection}' where " +
+                    $"{filterRow.FlowKey} = '{filterValue}'.";
+                return result;
+            }
+
+            string parentId = ExtractId(parentJson);
+            var resolved = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // 3. Build child document(s) and push each to the parent's array.
+            string? lastInsertedId = null;
+
+            foreach (string childCollection in childCollections)
+            {
+                JsonNode childDoc = _templateService.LoadTemplateAsNode(templateDirectory, templateFile);
+                List<SchemaRow> collectionRows = _schemaService.GetRowsForCollection(schema, childCollection).Where(r =>
+            !string.Equals(r.Source, "filter", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                // Pre-pass: resolve source=lookup rows.
+                List<SchemaRow> lookupRows = collectionRows
+                    .Where(r => string.Equals(r.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                await ApplyLookupRowsAsync(lookupRows, childDoc, dataRow, resolved);
+
+                // Fill document fields in schema order (skip auto, update, lookup).
+                foreach (SchemaRow row in collectionRows)
+                {
+                    if (string.Equals(row.Source, "auto", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(row.Source, "update", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(row.Source, "lookup", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string value = ResolveValue(row, dataRow, resolved, ctx, activeStatusId,
+                                                rowNumber, string.Empty, string.Empty);
+                    resolved[row.Property] = value;
+
+                    if (!string.IsNullOrEmpty(row.Flow) &&
+                        string.Equals(row.Flow, "publish", StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrEmpty(row.FlowKey))
+                    {
+                        _flowService.Publish(ctx.FlowContext, row.FlowKey, value);
+                    }
+
+                    SetValueAtJsonPath(childDoc, row, value);
+                }
+
+                // 4-7. Push the child document to the parent's array.
+                await _mongoService.PushToArrayAsync(
+                    filterRow.Collection, parentId, filterRow.JsonPath, childDoc.ToJsonString());
+
+                lastInsertedId = parentId;
+            }
+
+            result.IsSuccess = true;
+            result.Status    = "Inserted";
+            result.Message   = string.Empty;
+            result.ObjectId  = lastInsertedId;
         }
         catch (Exception ex)
         {
@@ -440,13 +569,28 @@ public class ProcessingService : IProcessingService
 
         if (string.Equals(row.Source, "excel", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(row.Property, "dateofjoining", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(row.DataType, "datetime", StringComparison.OrdinalIgnoreCase))
             {
                 string raw = dataRow.TryGetValue(row.Property, out string? dv) ? dv.Trim() : string.Empty;
-                return ConvertDateOfJoining(raw);
+                return ConvertDateValue(raw);
             }
 
-            return dataRow.TryGetValue(row.Property, out string? ev) ? ev : string.Empty;
+            bool columnExists = dataRow.TryGetValue(row.Property, out string? rawValue);
+
+            if (columnExists && !string.IsNullOrWhiteSpace(rawValue))
+                return rawValue;
+
+            if (columnExists && string.IsNullOrWhiteSpace(rawValue) && !string.IsNullOrEmpty(row.Formula))
+                return EvaluateFormula(row, resolved, ctx);
+
+            if (columnExists)
+                return string.Empty;
+
+            // Column is absent.
+            if (!row.IsMandatory && !string.IsNullOrEmpty(row.Formula))
+                return EvaluateFormula(row, resolved, ctx);
+
+            return string.Empty;
         }
 
         if (string.Equals(row.Source, "compute", StringComparison.OrdinalIgnoreCase))
@@ -560,7 +704,7 @@ public class ProcessingService : IProcessingService
         });
     }
 
-    private static string ConvertDateOfJoining(string raw)
+    private static string ConvertDateValue(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
             return string.Empty;
@@ -581,7 +725,7 @@ public class ProcessingService : IProcessingService
         else
         {
             throw new InvalidOperationException(
-                $"Invalid dateOfJoining value '{raw}'. Expected a valid date or an Excel date serial number.");
+                $"Invalid date value '{raw}'. Expected a valid date or an Excel date serial number.");
         }
 
         // Treat the parsed value as UTC (Option A: no timezone conversion).
@@ -625,6 +769,13 @@ public class ProcessingService : IProcessingService
                     $"Schema row '{row.Property}' has source=lookup with FlowKey='{lookupKey}', " +
                     $"but no entry found in Application:LookupMappings.");
 
+            // Array lookup: DataType=array processes comma-separated values into an array.
+            if (string.Equals(row.DataType, "array", StringComparison.OrdinalIgnoreCase))
+            {
+                await ApplyArrayLookupAsync(row, mapping, lookupKey, doc, dataRow);
+                continue;
+            }
+
             // For optional excel-driven lookups, skip if the input column is absent or blank.
             // The template value at the JsonPath is retained as-is.
             if (!row.IsMandatory &&
@@ -654,6 +805,124 @@ public class ProcessingService : IProcessingService
         }
     }
 
+    private async Task ApplyArrayLookupAsync(
+        SchemaRow row,
+        LookupMapping mapping,
+        string lookupKey,
+        JsonNode doc,
+        Dictionary<string, string> dataRow)
+    {
+        string inputColumn = mapping.InputColumn ?? string.Empty;
+        bool columnExists = dataRow.TryGetValue(inputColumn, out string? rawCellValue);
+
+        // Optional: missing or blank column → set target to null and skip.
+        if (!row.IsMandatory && (!columnExists || string.IsNullOrWhiteSpace(rawCellValue)))
+        {
+            SetPathToNull(doc, row.JsonPath);
+            return;
+        }
+
+        if (!columnExists || string.IsNullOrWhiteSpace(rawCellValue))
+            return; // Mandatory missing column is caught at validation; skip silently here.
+
+        // Parse, trim, deduplicate the comma-separated input values.
+        string[] rawValues = rawCellValue.Split(',');
+        var uniqueValues = rawValues
+            .Select(v => v.Trim())
+            .Where(v => !string.IsNullOrEmpty(v))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (uniqueValues.Count == 0)
+        {
+            if (!row.IsMandatory)
+                SetPathToNull(doc, row.JsonPath);
+            return;
+        }
+
+        // Locate the array item template in the document at the target JsonPath.
+        // The first element of the array serves as the clone template.
+        JsonNode? targetNode = NavigateToJsonPath(doc, row.JsonPath);
+        if (targetNode is not JsonArray templateArray || templateArray.Count == 0)
+            throw new InvalidOperationException(
+                $"Array lookup for property '{row.Property}': the template at JsonPath '{row.JsonPath}' " +
+                $"must be a non-empty JSON array containing at least one item template.");
+
+        string itemTemplateJson = templateArray[0]!.ToJsonString();
+
+        // Build the result array by resolving each unique value.
+        var resultArray = new JsonArray();
+        var singleValueRow = new Dictionary<string, string>(dataRow, StringComparer.OrdinalIgnoreCase);
+
+        foreach (string val in uniqueValues)
+        {
+            singleValueRow[inputColumn] = val;
+            string foundJson = await ResolveLookupAsync(lookupKey, mapping, singleValueRow);
+
+            JsonNode itemNode = JsonNode.Parse(itemTemplateJson)!;
+            if (itemNode is JsonObject itemObj)
+            {
+                foreach (KeyValuePair<string, string?> entry in mapping.Mappings ?? new())
+                {
+                    string targetProp = entry.Key;
+                    string? sourcePath = entry.Value;
+                    itemObj[targetProp] = sourcePath is null
+                        ? null
+                        : JsonValue.Create(ExtractFieldFromJson(foundJson, sourcePath));
+                }
+            }
+
+            resultArray.Add(itemNode);
+        }
+
+        if (resultArray.Count == 0 && !row.IsMandatory)
+        {
+            SetPathToNull(doc, row.JsonPath);
+            return;
+        }
+
+        // Replace the placeholder array in the document with the resolved result array.
+        SetArrayAtJsonPath(doc, row.JsonPath, resultArray);
+    }
+
+    /// <summary>Sets the leaf property at dot-notation path to null on the parent JsonObject.</summary>
+    private static void SetPathToNull(JsonNode doc, string jsonPath)
+    {
+        string[] parts = jsonPath.Split('.');
+        JsonNode? current = doc;
+
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (current is not JsonObject obj)
+                return;
+            current = obj[parts[i]];
+            if (current is null)
+                return;
+        }
+
+        if (current is JsonObject parentObj)
+            parentObj[parts[^1]] = null;
+    }
+
+    /// <summary>Replaces the array at dot-notation path in the document with the given JsonArray.</summary>
+    private static void SetArrayAtJsonPath(JsonNode doc, string jsonPath, JsonArray array)
+    {
+        string[] parts = jsonPath.Split('.');
+        JsonNode? current = doc;
+
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (current is not JsonObject obj)
+                return;
+            current = obj[parts[i]];
+            if (current is null)
+                return;
+        }
+
+        if (current is JsonObject parentObj)
+            parentObj[parts[^1]] = array;
+    }
+
     private async Task<string> ResolveLookupAsync(
         string lookupKey,
         LookupMapping mapping,
@@ -668,7 +937,23 @@ public class ProcessingService : IProcessingService
         if (_cacheService.TryGet(cacheKey, out string? cached) && cached is not null)
             return cached;
 
-        string? foundJson = await _mongoService.FindOneAsync(mapping.Collection, mapping.LookupPath, inputValue);
+        string? foundJson;
+
+        if (string.Equals(mapping.LookupProvider, "mssql", StringComparison.OrdinalIgnoreCase))
+        {
+            string connName = mapping.ConnectionName ?? string.Empty;
+            if (!_appSettings.ConnectionStrings.TryGetValue(connName, out string? connStr)
+                || string.IsNullOrWhiteSpace(connStr))
+                throw new InvalidOperationException(
+                    $"Lookup '{lookupKey}': ConnectionName '{connName}' not found in ConnectionStrings configuration.");
+
+            foundJson = await _sqlService.QuerySingleAsync(
+                connStr, mapping.Query ?? string.Empty, mapping.LookupPath, inputValue);
+        }
+        else
+        {
+            foundJson = await _mongoService.FindOneAsync(mapping.Collection, mapping.LookupPath, inputValue);
+        }
 
         if (foundJson is null)
         {
@@ -802,6 +1087,13 @@ public class ProcessingService : IProcessingService
 
         if (dt == "datetime")
         {
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                parentObj[leaf] = null;
+                return;
+            }
+
             // Write into {$date: ""} structure
             if (parentObj[leaf] is JsonObject dateObj)
                 dateObj["$date"] = JsonValue.Create(value);
@@ -861,19 +1153,12 @@ public class ProcessingService : IProcessingService
 
     private int PeekNextInsertSeq(string collection)
     {
-        if (string.Equals(collection, "masterDesignations", StringComparison.OrdinalIgnoreCase))
-            return _designationInsertSeq + 1;
-        if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
-            return _userInsertSeq + 1;
-        return 1;
+        return _insertSequences.TryGetValue(collection, out int seq) ? seq + 1 : 1;
     }
 
     private void IncrementInsertSeq(string collection)
     {
-        if (string.Equals(collection, "masterDesignations", StringComparison.OrdinalIgnoreCase))
-            _designationInsertSeq++;
-        else if (string.Equals(collection, "masterUsers", StringComparison.OrdinalIgnoreCase))
-            _userInsertSeq++;
+        _insertSequences[collection] = _insertSequences.TryGetValue(collection, out int seq) ? seq + 1 : 1;
     }
 
     private static string FormatSequence(int n) =>

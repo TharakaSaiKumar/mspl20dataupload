@@ -269,6 +269,7 @@ public partial class Form1 : Form
                 outputPath,
                 _selectedFormat.ModuleCode,
                 _selectedFormat.RequestPrefix,
+                _selectedFormat.TemplateFile.Replace(".json",""),
                 _mongoConfig,
                 progress,
                 _cts.Token);

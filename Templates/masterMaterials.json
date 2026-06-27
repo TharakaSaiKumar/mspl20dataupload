@@ -11,8 +11,8 @@
     "updatedOn": {
       "$date": ""
     },
-    "createdBy": "System",
-    "updatedBy": "System",
+    "createdBy": "WHUSER01",
+    "updatedBy": "WHUSER01",
     "formState": "ACTIVE",
     "formattedReferenceNumber": "",
     "basicInfoID": {
@@ -26,27 +26,37 @@
     "status": "Active",
     "cloneReferenceID": null,
     "unitDetails": {
-      "unitID": "67164bc3f66dae36420643f6",
-      "unitName": "Default-Unit",
-      "unitCode": "Z",
-      "unitActualID": "67164bc3f66dae36420643f6",
-      "displayData": "Default-Unit"
+      "unitID": "69fafdf2c330865c72171617",
+      "unitName": "Motto Systems Pvt Ltd",
+      "unitCode": "MSP",
+      "unitActualID": "69fafdf2c330865c72171617",
+      "displayData": "Motto Systems Pvt Ltd"
     },
     "userDetails": {
-      "userID": "6718ef375d657f449e40d70a",
-      "userName": "System",
-      "userActualID": "6718ef375d657f449e40d70a",
-      "unitID": "67164bc3f66dae36420643f6",
-      "unitName": "Default-Unit",
-      "departmentID": "67164d40f66dae36420643fe",
-      "departmentName": "Default-Department",
-      "designationID": "67164e95f66dae364206440e",
-      "designationNane": "Default-Designation",
-      "displayData": "System",
+      "userID": "69fb0389551195ce12e96d01",
+      "userName": "WHUSER01",
+      "userActualID": "69fb0389551195ce12e96d01",
+      "unitID": "69fafdf2c330865c72171617",
+      "unitName": "Motto Systems Pvt Ltd",
+      "departmentID": "69facc897f27f619df2af5f4",
+      "departmentName": "Warehouse",
+      "designationID": "69fad2247f27f619df2af696",
+      "designationNane": "Manager (MNG)",
+      "displayData": "WHUSER01",
       "departmentActualID": ""
     },
-    "formattedName": "Calibration Solution -Calibration Solution -Calibration Solution (Calibration SolutionCalibration Solution)",
-    "userModuleCode": ""
+    "formattedName": "",
+    "discardedInfo": null,
+    "discardedOn": null,
+    "discardedBy": null,
+    "discardRemarks": null,
+    "revisionRemarks": null,
+    "userModuleCode": "",
+    "effectiveFrom": null,
+    "effectiveTo": null,
+    "integrationReferenceID": null,
+    "integrationReferenceActualID": null,
+    "integrationReferenceCode": null
   },
   "materialInfo": {
     "category": {
@@ -70,46 +80,47 @@
     "sdsCode": null,
     "materialForm": null,
     "primaryUom": {
-      "item": "Feet",
-      "itemCode": "FEET",
-      "itemID": "8",
-      "itemActualID": "8",
+      "item": "",
+      "itemCode": "",
+      "itemID": "",
+      "itemActualID": "",
       "isActive": null,
-      "displayData": "Feet",
+      "displayData": "",
       "systemCode": null
     },
     "storageCondition": null,
-    "remarks": "",
+    "remarks": null,
     "formattedName": "",
     "ksmKimMaterial": null,
     "usageUom": {
-      "item": "Microgram",
-      "itemCode": "MICROGRAM",
-      "itemID": "13",
-      "itemActualID": "13",
+      "item": "",
+      "itemCode": "",
+      "itemID": "",
+      "itemActualID": "",
       "isActive": null,
-      "displayData": "Microgram",
+      "displayData": "",
       "systemCode": null
     },
-    "usageConversionFactor": "1"
+    "usageConversionFactor": null,
+    "fj0AtS_clear": null,
+    "fj0AtS_add": null,
+    "additionalReferenceID": "",
+    "revisionRemarks": "",
+    "parentID": "",
+    "discardRemarks": "",
+    "unassignRemarks": "",
+    "itemReferenceID": null
   },
   "uomConversions": null,
   "materialOtherNames": null,
   "materialAdditionalInformation": null,
   "unitAssignments": [
     {
-      "unitID": "67164bc3f66dae36420643f6",
-      "unitActualID": "67164bc3f66dae36420643f6",
-      "unitName": "Default-Unit",
-      "unitCode": "Z",
-      "displayData": "Default-Unit (Z)"
-    },
-    {
-      "unitID": "6751c0276522e8b0b0656999",
-      "unitActualID": "6751c0276522e8b0b0656999",
-      "unitName": "Unit-IV",
-      "unitCode": "D",
-      "displayData": "Unit-IV (D)"
+      "unitID": "",
+      "unitActualID": "",
+      "unitName": "",
+      "unitCode": "",
+      "displayData": ""
     }
   ],
   "materialAdditionalInformationHistory": null,
@@ -121,32 +132,5 @@
       "formType": "MAIN_FORM"
     }
   ],
-  "level1Signature": {
-    "_id": "69be5f615e0c59c0cf60c3b8",
-    "actionBy": "System",
-    "actionOnDate": {
-      "$date": "2026-03-21T09:05:37.657Z"
-    },
-    "actionOnDateTime": {
-      "$date": "2026-03-21T09:05:37.657Z"
-    },
-    "designation": "Default-Designation",
-    "departmentName": "Default-Department",
-    "unitName": "Default-Unit"
-  },
-  "level2Signature": {
-    "_id": "69be606d5e0c59c0cf60c3c0",
-    "actionBy": "System",
-    "actionOnDate": {
-      "$date": "2026-03-21T09:10:05.394Z"
-    },
-    "actionOnDateTime": {
-      "$date": "2026-03-21T09:10:05.394Z"
-    },
-    "designation": "Default-Designation",
-    "departmentName": "Default-Department",
-    "unitName": "Default-Unit"
-  },
-  "isSynced": false,
-  "isSecondarySynced": false
+  "isSynced": false
 }

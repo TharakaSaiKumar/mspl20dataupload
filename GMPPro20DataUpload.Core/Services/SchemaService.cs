@@ -8,7 +8,7 @@ namespace GMPPro20DataUpload.Core.Services;
 public class SchemaService : ISchemaService
 {
     private static readonly HashSet<string> ValidDataTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object" };
+        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object", "array" };
 
     private static readonly HashSet<string> ValidSources =
         new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup", "settings", "key", "filter", "formula" };
@@ -179,6 +179,13 @@ public class SchemaService : ISchemaService
                         $"{loc}: Formula dependency '{dependency}' is not defined before this row.");
             }
         }
+
+        // Only one filter row is supported per schema.
+        int filterRowCount = rows.Count(r =>
+            string.Equals(r.Source, "filter", StringComparison.OrdinalIgnoreCase));
+        if (filterRowCount > 1)
+            errors.AppendLine(
+                $"Schema contains {filterRowCount} rows with Source=filter. Only one filter row is supported per schema.");
 
         if (errors.Length > 0)
             throw new InvalidOperationException(

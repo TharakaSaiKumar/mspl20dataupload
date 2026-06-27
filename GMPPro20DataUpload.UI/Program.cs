@@ -30,6 +30,15 @@ static class Program
         if (!Path.IsPathRooted(appSettings.FormatsFile))
             appSettings.FormatsFile = Path.Combine(AppContext.BaseDirectory, appSettings.FormatsFile);
 
+        // Populate ConnectionStrings from the top-level ConnectionStrings config section.
+        // These are used by MSSQL lookup providers referenced in LookupMappings.
+        IConfigurationSection csSection = config.GetSection("ConnectionStrings");
+        foreach (IConfigurationSection entry in csSection.GetChildren())
+        {
+            if (!string.IsNullOrWhiteSpace(entry.Value))
+                appSettings.ConnectionStrings[entry.Key] = entry.Value;
+        }
+
         ServiceCollection services = new();
 
         services.AddLogging(logging =>

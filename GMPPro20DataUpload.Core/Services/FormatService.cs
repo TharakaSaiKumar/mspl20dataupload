@@ -56,6 +56,9 @@ public class FormatService : IFormatService
             if (string.IsNullOrWhiteSpace(fmt.ModuleCode))
                 errors.Add($"{loc}: ModuleCode must not be empty.");
 
+            if (string.IsNullOrWhiteSpace(fmt.RequestPrefix))
+                errors.Add($"{loc}: RequestPrefix must not be empty.");
+
             if (string.IsNullOrWhiteSpace(fmt.SchemaFile))
                 errors.Add($"{loc}: SchemaFile must not be empty.");
 

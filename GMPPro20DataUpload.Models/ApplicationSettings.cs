@@ -18,4 +18,10 @@ public class ApplicationSettings
 
     /// <summary>Maps lookup keys to their lookup definitions (e.g. activeStatus, primaryUnit).</summary>
     public Dictionary<string, LookupMapping> LookupMappings { get; set; } = new();
+
+    /// <summary>
+    /// Named connection strings for MSSQL lookup providers.
+    /// Populated at startup from the ConnectionStrings section of appsettings.json.
+    /// </summary>
+    public Dictionary<string, string> ConnectionStrings { get; set; } = new();
 }

@@ -123,6 +123,28 @@ public class MongoService : IMongoService
         return (int)count + 1;
     }
 
+    public async Task PushToArrayAsync(string collectionName, string documentId, string arrayPath, string childDocumentJson)
+    {
+        var collection = GetDatabase().GetCollection<BsonDocument>(collectionName);
+
+        FilterDefinition<BsonDocument> filter =
+            Builders<BsonDocument>.Filter.Eq("_id", ObjectId.Parse(documentId));
+
+        BsonDocument childDoc = BsonDocument.Parse(childDocumentJson);
+
+        // If target array exists as null, convert it to empty array first.
+        var nullArrayFilter = filter & Builders<BsonDocument>.Filter.Eq(arrayPath, BsonNull.Value);
+        var setEmptyArray = Builders<BsonDocument>.Update.Set(arrayPath, new BsonArray());
+
+        await collection.UpdateOneAsync(nullArrayFilter, setEmptyArray);
+
+        // Push generated object into target array.
+        UpdateDefinition<BsonDocument> update =
+            Builders<BsonDocument>.Update.Push(arrayPath, childDoc);
+
+        await collection.UpdateOneAsync(filter, update);
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------

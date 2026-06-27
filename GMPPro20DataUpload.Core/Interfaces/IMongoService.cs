@@ -41,4 +41,11 @@ public interface IMongoService
     /// based on existing records in usrRequestBasicInfo.
     /// </summary>
     Task<int> GetNextSequenceAsync(string moduleCode);
+
+    /// <summary>
+    /// Appends a child document to an array field on an existing parent document using a MongoDB $push.
+    /// The parent document is located by its _id. The child document is parsed from childDocumentJson.
+    /// If the target array field does not exist, MongoDB creates it.
+    /// </summary>
+    Task PushToArrayAsync(string collectionName, string documentId, string arrayPath, string childDocumentJson);
 }

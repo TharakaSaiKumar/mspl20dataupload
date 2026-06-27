@@ -25,6 +25,7 @@ public interface IProcessingService
         string outputPath,
         string moduleCode,
         string requestPrefix,
+        string templateFile,
         MongoConfiguration mongoConfig,
         IProgress<string> progress,
         CancellationToken cancellationToken);
