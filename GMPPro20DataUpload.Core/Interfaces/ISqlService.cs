@@ -2,6 +2,12 @@ namespace GMPPro20DataUpload.Core.Interfaces;
 
 public interface ISqlService
 {
+
+    /// <summary>
+    /// Tests whether the SQL server is reachable using the provided configuration.
+    /// </summary>
+    Task<bool> TestConnectionAsync(string connectionString);
+
     /// <summary>
     /// Executes the given SQL query against the database identified by connectionString,
     /// then returns the first row where the column named by lookupPath matches value

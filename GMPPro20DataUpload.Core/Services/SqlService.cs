@@ -7,6 +7,22 @@ namespace GMPPro20DataUpload.Core.Services;
 
 public class SqlService : ISqlService
 {
+    public async Task<bool> TestConnectionAsync(string connectionString)
+    {
+        // Use the supplied config for the connection test (interface compatibility).
+        // Internal operations use the injected _config.
+        try
+        {
+            await using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task<string?> QuerySingleAsync(
         string connectionString,
         string query,

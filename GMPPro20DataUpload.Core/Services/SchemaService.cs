@@ -8,7 +8,7 @@ namespace GMPPro20DataUpload.Core.Services;
 public class SchemaService : ISchemaService
 {
     private static readonly HashSet<string> ValidDataTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object", "array" };
+        new(StringComparer.OrdinalIgnoreCase) { "text", "integer", "datetime", "objectid", "object", "array", "decimal" };
 
     private static readonly HashSet<string> ValidSources =
         new(StringComparer.OrdinalIgnoreCase) { "excel", "compute", "auto", "update", "lookup", "settings", "key", "filter", "formula" };

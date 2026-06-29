@@ -569,16 +569,19 @@ public class ProcessingService : IProcessingService
 
         if (string.Equals(row.Source, "excel", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(row.DataType, "datetime", StringComparison.OrdinalIgnoreCase))
-            {
-                string raw = dataRow.TryGetValue(row.Property, out string? dv) ? dv.Trim() : string.Empty;
-                return ConvertDateValue(raw);
-            }
 
             bool columnExists = dataRow.TryGetValue(row.Property, out string? rawValue);
 
             if (columnExists && !string.IsNullOrWhiteSpace(rawValue))
+            {
+                if (string.Equals(row.DataType, "datetime", StringComparison.OrdinalIgnoreCase))
+                {
+                    string raw = dataRow.TryGetValue(row.Property, out string? dv) ? dv.Trim() : string.Empty;
+                    return ConvertDateValue(raw);
+                }
+
                 return rawValue;
+            }
 
             if (columnExists && string.IsNullOrWhiteSpace(rawValue) && !string.IsNullOrEmpty(row.Formula))
                 return EvaluateFormula(row, resolved, ctx);
@@ -685,6 +688,9 @@ public class ProcessingService : IProcessingService
         if (string.IsNullOrEmpty(formula))
             return string.Empty;
 
+        if (string.Equals(formula, "now()", StringComparison.OrdinalIgnoreCase))
+            return DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        
         return Regex.Replace(formula, @"\{(\w+)\}", match =>
         {
             string placeholder = match.Groups[1].Value;
@@ -787,7 +793,10 @@ public class ProcessingService : IProcessingService
                     string.IsNullOrWhiteSpace(cellValue);
 
                 if (columnMissingOrBlank)
+                {
+                    SetPathToNull(doc, row.JsonPath);
                     continue;
+                }
             }
 
             string foundJson = await ResolveLookupAsync(lookupKey, mapping, dataRow);
@@ -1114,6 +1123,22 @@ public class ProcessingService : IProcessingService
                 parentObj[leaf] = JsonValue.Create(intVal);
             else
                 parentObj[leaf] = JsonValue.Create(value);
+        }
+        else if (dt == "decimal")
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                parentObj[leaf] = null;
+            }
+            else if (decimal.TryParse(value, out decimal decimalVal))
+            {
+                parentObj[leaf] = JsonValue.Create(decimalVal);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Invalid decimal value '{value}' for property '{row.Property}'.");
+            }
         }
         else if (dt == "object")
         {

@@ -9,6 +9,7 @@ public partial class Form1 : Form
     private readonly IProcessingService _processingService;
     private readonly IValidationService _validationService;
     private readonly IMongoService _mongoService;
+    private readonly ISqlService _sqlService;
     private readonly IFormatService _formatService;
     private readonly MongoConfiguration _mongoConfig;
     private readonly ApplicationSettings _appSettings;
@@ -22,6 +23,7 @@ public partial class Form1 : Form
         IProcessingService processingService,
         IValidationService validationService,
         IMongoService mongoService,
+        ISqlService sqlService,
         IFormatService formatService,
         MongoConfiguration mongoConfig,
         ApplicationSettings appSettings)
@@ -31,6 +33,7 @@ public partial class Form1 : Form
         _mongoService      = mongoService;
         _formatService     = formatService;
         _mongoConfig       = mongoConfig;
+        _sqlService        = sqlService;
         _appSettings       = appSettings;
         InitializeComponent();
         LoadFormats();
@@ -103,6 +106,15 @@ public partial class Form1 : Form
         {
             bool ok = await _mongoService.TestConnectionAsync(_mongoConfig);
             AppendStatus(ok ? "MongoDB connection successful." : "MongoDB connection failed.");
+
+
+            foreach (var connection in _appSettings.ConnectionStrings)
+            {
+                bool okSql = await _sqlService.TestConnectionAsync(connection.Value);
+                AppendStatus(okSql
+                    ? $"{connection.Key} connection successful."
+                    : $"{connection.Key} connection failed.");
+            }
         }
         catch (Exception ex)
         {

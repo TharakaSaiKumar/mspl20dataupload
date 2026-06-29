@@ -80,7 +80,7 @@ partial class Form1
         _cboFormat.DropDownStyle = ComboBoxStyle.DropDownList;
         _cboFormat.Location = new Point(103, 16);
         _cboFormat.Name = "_cboFormat";
-        _cboFormat.Size = new Size(762, 31);
+        _cboFormat.Size = new Size(762, 33);
         _cboFormat.TabIndex = 1;
         _cboFormat.SelectedIndexChanged += CboFormat_SelectedIndexChanged;
         // 
@@ -144,7 +144,7 @@ partial class Form1
         _btnTestConnection.Name = "_btnTestConnection";
         _btnTestConnection.Size = new Size(175, 36);
         _btnTestConnection.TabIndex = 9;
-        _btnTestConnection.Text = "Test MongoDB Connection";
+        _btnTestConnection.Text = "Test Database";
         _btnTestConnection.Click += BtnTestConnection_Click;
         // 
         // _btnValidate
@@ -196,6 +196,7 @@ partial class Form1
         // 
         _txtStatus.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         _txtStatus.BackColor = SystemColors.Window;
+        _txtStatus.Font = new Font("Consolas", 10F);
         _txtStatus.Location = new Point(12, 304);
         _txtStatus.Multiline = true;
         _txtStatus.Name = "_txtStatus";
@@ -203,7 +204,6 @@ partial class Form1
         _txtStatus.ScrollBars = ScrollBars.Vertical;
         _txtStatus.Size = new Size(867, 296);
         _txtStatus.TabIndex = 15;
-        _txtStatus.Font = new Font("Consolas", 10F);
         // 
         // _lblSummary
         // 
@@ -217,6 +217,7 @@ partial class Form1
         // 
         _txtSummary.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         _txtSummary.BackColor = SystemColors.Window;
+        _txtSummary.Font = new Font("Consolas", 10F);
         _txtSummary.Location = new Point(12, 637);
         _txtSummary.Multiline = true;
         _txtSummary.Name = "_txtSummary";
@@ -224,7 +225,6 @@ partial class Form1
         _txtSummary.ScrollBars = ScrollBars.Vertical;
         _txtSummary.Size = new Size(867, 276);
         _txtSummary.TabIndex = 17;
-        _txtSummary.Font = new Font("Consolas", 10F);
         // 
         // Form1
         // 
